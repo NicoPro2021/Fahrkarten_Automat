@@ -1,1 +1,37 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fahrkartenautomat Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+    <div id="automat">
+        <div class="header">
+            <h2>Regio-Ticket Terminal</h2>
+            <div id="uhrzeit">00:00:00</div>
+        </div>
+        
+        <div class="screen" id="display">
+            <h3>Wohin möchten Sie reisen?</h3>
+            <p class="hinweis">Bitte wählen Sie Ihr Reiseziel auf dem Touchscreen aus:</p>
+            
+            <div class="button-grid">
+                <button class="btn-ziel" onclick="waehleZiel('Berlin Hbf', 24.50)">Berlin Hbf<br><span class="preis-tag">24,50 €</span></button>
+                <button class="btn-ziel" onclick="waehleZiel('Magdeburg Hbf', 12.00)">Magdeburg Hbf<br><span class="preis-tag">12,00 €</span></button>
+                <button class="btn-ziel" onclick="waehleZiel('Zerbst/Anhalt', 4.20)">Zerbst/Anhalt<br><span class="preis-tag">4,20 €</span></button>
+                <button class="btn-ziel" onclick="waehleZiel('Halle (Saale) Hbf', 18.90)">Halle (Saale) Hbf<br><span class="preis-tag">18,90 €</span></button>
+            </div>
+        </div>
+        
+        <div class="hardware-leiste">
+            <div class="schlitz"> [ 💳 Kartenzahlung ]</div>
+            <div class="schlitz"> [ 🪙 Münzeinwurf ]</div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
