@@ -1,128 +1,202 @@
-/* Grundkonfiguration */
+/* DB Corporate Design Farben */
+:root {
+    --db-rot: #ec0016;       /* Original DB Verkehrsrot */
+    --db-grau-dunkel: #282d37; /* Hintergrund für Gehäuse/Texte */
+    --db-grau-hell: #f0f3f5;   /* Haupt-Hintergrund des Bildschirms */
+    --db-grau-bedien: #e2e7ea;/* Hintergrund für Inaktive Flächen / Buttons */
+    --db-weiss: #ffffff;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #2c3e50;
+    font-family: 'Arial', sans-serif;
+    background-color: #1e2124;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    -webkit-user-select: none; /* Verhindert Textmarkierung auf Touchscreens */
+    user-select: none;
 }
 
-/* Das physische Automaten-Gehäuse */
+/* Das Gehäuse des Automaten */
 #automat {
-    width: 450px;
-    height: 680px;
-    background-color: #34495e;
-    border: 8px solid #2c3e50;
-    border-radius: 15px;
-    color: white;
+    width: 500px;
+    height: 720px;
+    background-color: var(--db-grau-dunkel);
+    border: 6px solid #1a1c20;
+    border-radius: 4px;
+    color: var(--db-grau-dunkel);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+}
+
+/* Der echte DB-Bildschirm */
+.screen {
+    background-color: var(--db-grau-hell);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
-/* Kopfzeile */
+/* Roter DB-Header */
 .header {
-    background-color: #c0392b; /* Modernes Automaten-Rot */
-    padding: 15px;
-    text-align: center;
-    border-bottom: 4px solid #962d22;
+    background-color: var(--db-rot);
+    color: var(--db-weiss);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Simuliertes DB-Logo */
+.db-logo {
+    background-color: var(--db-weiss);
+    color: var(--db-rot);
+    font-weight: 900;
+    font-size: 1.4rem;
+    padding: 2px 10px;
+    border: 3px solid var(--db-rot);
+    border-radius: 4px;
+    letter-spacing: -1px;
+    line-height: 1;
 }
 
 .header h2 {
     margin: 0;
-    font-size: 1.4rem;
-    letter-spacing: 1px;
+    font-size: 1.1rem;
+    font-weight: normal;
 }
 
 #uhrzeit {
-    font-size: 0.9rem;
-    color: #f1c40f;
-    margin-top: 5px;
+    font-size: 1.1rem;
+    font-weight: bold;
 }
 
-/* Der "Touchscreen" */
-.screen {
-    background-color: #1a1a1a;
-    flex-grow: 1;
-    margin: 15px;
+/* Inhalt des Bildschirms */
+.content {
     padding: 20px;
-    border-radius: 8px;
-    border: 3px solid #2c3e50;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 h3 {
     margin-top: 0;
-    color: #ecf0f1;
-    border-bottom: 1px solid #444;
-    padding-bottom: 10px;
+    font-size: 1.4rem;
+    color: var(--db-grau-dunkel);
+    font-weight: bold;
+    border-bottom: 2px solid var(--db-rot);
+    padding-bottom: 8px;
 }
 
-.hinweis {
-    color: #bdc3c7;
-    font-size: 0.9rem;
-}
-
-/* Anordnung der Stationsknöpfe */
+/* DB Button Grid */
 .button-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
 }
 
-/* Die Touch-Buttons für die Ziele */
-.btn-ziel {
-    background: linear-gradient(145deg, #4a6572, #34495e);
-    color: white;
-    border: 2px solid #23313d;
-    padding: 14px;
+/* Die originalen, grauen DB-Touch-Buttons */
+.btn-db {
+    background-color: var(--db-weiss);
+    color: var(--db-grau-dunkel);
+    border: 2px solid #bdc3c7;
+    padding: 20px 15px;
     font-size: 1.1rem;
     font-weight: bold;
     text-align: left;
-    border-radius: 6px;
     cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: center;
-    transition: background 0.2s;
+    min-height: 90px;
+    box-sizing: border-box;
 }
 
-.btn-ziel:active {
-    background: #c0392b;
-    border-color: #962d22;
+.btn-db:active {
+    background-color: var(--db-rot);
+    color: var(--db-weiss);
+    border-color: var(--db-rot);
+}
+
+.btn-db:active .preis-tag {
+    background-color: var(--db-weiss);
+    color: var(--db-rot);
 }
 
 .preis-tag {
-    background-color: #27ae60;
-    padding: 4px 8px;
-    border-radius: 4px;
+    background-color: var(--db-rot);
+    color: var(--db-weiss);
+    padding: 2px 6px;
     font-size: 0.9rem;
+    align-self: flex-end;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* DB-Aktionsbuttons (z.B. Bezahlen, Weiter) */
+.btn-action {
+    grid-column: span 2;
+    background-color: var(--db-rot);
+    color: var(--db-weiss);
+    border: none;
+    text-align: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+}
+.btn-action:active {
+    background-color: #b30010;
+}
+
+/* Untere graue Menüleiste des Bildschirms */
+.footer-nav {
+    background-color: var(--db-grau-bedien);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #d1d7da;
+}
+
+.btn-nav {
+    background-color: var(--db-weiss);
+    border: 1px solid #b0b5b8;
+    padding: 10px 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.btn-nav.cancel {
+    border-color: var(--db-rot);
+    color: var(--db-rot);
 }
 
 /* Ticket-Druck-Ansicht */
 .ticket-ausgabe {
-    background-color: #fff;
-    color: #000;
-    padding: 15px;
-    border-radius: 4px;
-    border: 2px dashed #000;
-    text-align: center;
-    margin-top: 20px;
+    background-color: #fffcf0;
+    color: #111;
+    padding: 20px;
+    border: 1px solid #ccc;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     font-family: 'Courier New', Courier, monospace;
+    line-height: 1.4;
+    margin-top: 10px;
 }
 
-/* Unten am Gehäuse */
+/* Physische Schlitze ganz unten am Gerät */
 .hardware-leiste {
-    background-color: #2c3e50;
+    background-color: var(--db-grau-dunkel);
     display: flex;
     justify-content: space-around;
-    padding: 10px;
-    font-size: 0.8rem;
-    color: #bdc3c7;
-    border-top: 2px solid #34495e;
+    padding: 12px;
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
