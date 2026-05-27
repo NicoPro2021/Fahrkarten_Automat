@@ -1,4 +1,22 @@
-// Uhrzeit im DB-Format (HH:MM) aktualisieren
+// Globale Buchungsdaten
+let buchung = {
+    von: "Magdeburg Hbf", // Standard-Start
+    nach: "",
+    klasse: "2",
+    rabatt: "kein",
+    baNummer: ""
+};
+
+// Haltestellen-Datenbank (Simuliert "alle Bahnhöfe")
+const bahnhoefe = [
+    "Berlin Hbf", "Berlin Südkreuz", "Magdeburg Hbf", "Zerbst/Anhalt", 
+    "Halle (Saale) Hbf", "Leipzig Hbf", "München Hbf", "Hamburg Hbf", 
+    "Köln Hbf", "Frankfurt(Main)Hbf", "Dresden Hbf", "Stuttgart Hbf",
+    "Hannover Hbf", "Düsseldorf Hbf", "Nürnberg Hbf"
+];
+
+let aktivesFeld = "nach"; // Welches Feld wird gerade per Tastatur betippt?
+
 function updateUhrzeit() {
     const uhrzeitElement = document.getElementById('uhrzeit');
     const jetzt = new Date();
@@ -7,76 +25,208 @@ function updateUhrzeit() {
 setInterval(updateUhrzeit, 1000);
 updateUhrzeit();
 
-// Funktion: Ziel ausgewählt (Zahlungsmenü im DB-Stil)
-function waehleZiel(zielName, preis) {
+// STARTSEITE: Stationen wählen
+function zeigeSchritt1() {
+    document.getElementById('menue-titel').textContent = "Start / Ziel wählen";
     const display = document.getElementById('display');
-    const navigation = document.getElementById('navigation');
     
     display.innerHTML = `
-        <h3>Zahlung & Tarifauswahl</h3>
-        <p style="font-size: 1.1rem; color: #282d37; margin: 10px 0;">
-            Gewähltes Ziel: <strong>${zielName}</strong><br>
-            Reisende: 1 Erwachsener, 2. Klasse
-        </p>
-        <p style="font-size: 1.5rem; color: #ec0016; font-weight: bold; margin: 15px 0;">
+        <h3>Reiseverbindung eingeben</h3>
+        
+        <label style="font-size:0.9rem; font-weight:bold;">Abfahrtsbahnhof:</label>
+        <div id="feld-von" class="input-box ${aktivesFeld==='von'?'active':''}" onclick="setzeAktivesFeld('von')">${buchung.von || 'Bitte tippen...'}</div>
+        
+        <label style="font-size:0.9rem; font-weight:bold;">Zielbahnhof:</label>
+        <div id="feld-nach" class="input-box ${aktivesFeld==='nach'?'active':''}" onclick="setzeAktivesFeld('nach')">${buchung.nach || 'Bitte tippen...'}</div>
+        
+        <div id="vorschläge" class="vorschlag-liste" style="display:none;"></div>
+        
+        <div class="tastatur">
+            ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => `<div class="key" onclick="tippeBuchstabe('${l}')">${l}</div>`).join("")}
+            <div class="key" onclick="tippeBuchstabe(' ')">LEER</div>
+            <div class="key wide" style="background:#e74c3c; color:white;" onclick="loescheBuchstabe()">⌫</div>
+        </div>
+        
+        <button class="btn-weiter" onclick="pruefeSchritt1()">Weiter zur Ticket-Auswahl ➔</button>
+    `;
+    
+    rendereNavigation("start");
+}
+
+function setzeAktivesFeld(feld) {
+    aktivesFeld = feld;
+    zeigeSchritt1();
+}
+
+function tippeBuchstabe(b) {
+    if(aktivesFeld === "von") buchung.von += b;
+    if(aktivesFeld === "nach") buchung.nach += b;
+    zeigeSchritt1();
+    zeigeVorschlaege();
+}
+
+function loescheBuchstabe() {
+    if(aktivesFeld === "von") buchung.von = buchung.von.slice(0, -1);
+    if(aktivesFeld === "nach") buchung.nach = buchung.nach.slice(0, -1);
+    zeigeSchritt1();
+    zeigeVorschlaege();
+}
+
+function zeigeVorschlaege() {
+    const suchText = (aktivesFeld === "von" ? buchung.von : buchung.nach).toUpperCase();
+    const vDiv = document.getElementById('vorschläge');
+    if(suchText.length < 1) { vDiv.style.display = "none"; return; }
+    
+    const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
+    if(treffer.length > 0) {
+        vDiv.style.display = "block";
+        vDiv.innerHTML = treffer.map(t => `<div class="vorschlag-item" onclick="waehleVorschlag('${t}')">${t}</div>`).join("");
+    } else {
+        vDiv.style.display = "none";
+    }
+}
+
+function waehleVorschlag(bahnhof) {
+    if(aktivesFeld === "von") buchung.von = bahnhof;
+    if(aktivesFeld === "nach") buchung.nach = bahnhof;
+    document.getElementById('vorschläge').style.display = "none";
+    zeigeSchritt1();
+}
+
+function pruefeSchritt1() {
+    if(!buchung.von || !buchung.nach) {
+        alert("Bitte geben Sie Start und Ziel ein!");
+        return;
+    }
+    zeigeSchritt2();
+}
+
+// SCHRITT 2: Klasse, Sonderangebote, BA-Nummer
+function zeigeSchritt2() {
+    document.getElementById('menue-titel').textContent = "Klasse & Rabatte wählen";
+    const display = document.getElementById('display');
+    
+    display.innerHTML = `
+        <h3>Klasse & Sonderangebote</h3>
+        
+        <p style="font-weight:bold; margin-bottom:5px;">Wählen Sie die Wagenklasse:</p>
+        <div class="optionen-grid">
+            <div class="opt-card ${buchung.klasse==='2'?'selected':''}" onclick="buchung.klasse='2'; zeigeSchritt2();">2. Klasse</div>
+            <div class="opt-card ${buchung.klasse==='1'?'selected':''}" onclick="buchung.klasse='1'; zeigeSchritt2();">1. Klasse</div>
+        </div>
+        
+        <p style="font-weight:bold; margin-bottom:5px;">Tarif / Sonderangebot:</p>
+        <div class="optionen-grid">
+            <div class="opt-card ${buchung.rabatt==='kein'?'selected':''}" onclick="buchung.rabatt='kein'; zeigeSchritt2();">Normaltarif</div>
+            <div class="opt-card ${buchung.rabatt==='bundeswehr'?'selected':''}" onclick="buchung.rabatt='bundeswehr'; zeigeSchritt2();">Bundeswehr (in Uniform)</div>
+            <div class="opt-card ${buchung.rabatt==='mitarbeiter'?'selected':''}" onclick="buchung.rabatt='mitarbeiter'; zeigeSchritt2();">DB-Mitarbeiter (Fahrvergünstigung)</div>
+        </div>
+        
+        ${buchung.rabatt === 'mitarbeiter' ? `
+            <label style="font-size:0.9rem; font-weight:bold; color:var(--db-rot);">Bitte BA-Nummer (Personalnummer) eingeben:</label>
+            <input type="text" id="baInput" placeholder="z.B. BA123456" value="${buchung.baNummer}" oninput="buchung.baNummer=this.value" style="width:95%; padding:10px; font-size:1.1rem; margin-top:5px; border:2px solid var(--db-rot);">
+        ` : ''}
+        
+        <button class="btn-weiter" onclick="berechneUndZahle()">Weiter zur Zahlung ➔</button>
+    `;
+    
+    rendereNavigation("schritt2");
+}
+
+// SCHRITT 3: Preisberechnung und Bezahlung
+function berechneUndZahle() {
+    if(buchung.rabatt === 'mitarbeiter' && !buchung.baNummer) {
+        alert("Für den Mitarbeitertarif wird eine gültige BA-Nummer benötigt!");
+        return;
+    }
+
+    document.getElementById('menue-titel').textContent = "Zahlung";
+    const display = document.getElementById('display');
+    
+    // Basispreis-Simulation
+    let preis = 15.60;
+    if(buchung.klasse === "1") preis *= 1.6; // Aufpreis 1. Klasse
+    
+    // Rabatte anrechnen
+    if(buchung.rabatt === 'bundeswehr') preis = 0.00; // Freifahrt in Uniform
+    if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; // 90% Rabatt für Mitarbeiter
+
+    display.innerHTML = `
+        <h3>Zahlung</h3>
+        <div style="background:white; padding:15px; border:1px solid #ccc; margin-bottom:15px;">
+            <p><strong>Verbindung:</strong> ${buchung.von} ➔ ${buchung.nach}</p>
+            <p><strong>Klasse:</strong> ${buchung.klasse}. Klasse</p>
+            <p><strong>Tarif:</strong> ${buchung.rabatt === 'mitarbeiter' ? `Mitarbeiter-Rabatt (BA: ${buchung.baNummer})` : buchung.rabatt === 'bundeswehr' ? 'Bundeswehr Freifahrt' : 'Normaltarif'}</p>
+        </div>
+        
+        <p style="font-size: 1.6rem; color: var(--db-rot); font-weight: bold; text-align:center; margin: 15px 0;">
             Gesamtpreis: ${preis.toFixed(2)} €
         </p>
         
-        <div class="button-grid">
-            <button class="btn-db" style="border-color: #27ae60;" onclick="simuliereZahlung('${zielName}', ${preis})">
-                <span>💳 Kartenzahlung</span>
-                <span class="preis-tag" style="background-color: #27ae60;">Auswählen</span>
-            </button>
-            <button class="btn-db" style="border-color: #2980b9;" onclick="simuliereZahlung('${zielName}', ${preis})">
-                <span>🪙 Bargeld / Münzen</span>
-                <span class="preis-tag" style="background-color: #2980b9;">Auswählen</span>
-            </button>
+        <div class="optionen-grid">
+            <button class="btn-weiter" style="background:#27ae60; margin:0;" onclick="druckeTicket(${preis})">💳 Karte</button>
+            <button class="btn-weiter" style="background:#2980b9; margin:0;" onclick="druckeTicket(${preis})">🪙 Bar</button>
         </div>
     `;
-    
-    // Untere Navigationsleiste anpassen (Abbrechen-Button hinzufügen)
-    navigation.innerHTML = `
-        <button class="btn-nav cancel" onclick="location.reload()">❌ Abbruch</button>
-        <button class="btn-nav" disabled style="opacity: 0.5;">❓ Hilfe</button>
-    `;
+    rendereNavigation("zahlung");
 }
 
-// Funktion: Zahlung simulieren und Ticket drucken (DB-Fahrkarten-Layout)
-function simuliereZahlung(zielName, preis) {
+// SCHRITT 4: Ticketdruck
+function druckeTicket(endPreis) {
+    document.getElementById('menue-titel').textContent = "Ticket-Druck";
     const display = document.getElementById('display');
-    const navigation = document.getElementById('navigation');
     const heute = new Date().toLocaleDateString('de-DE');
     
     display.innerHTML = `
-        <h3>Ticket-Ausgabe</h3>
-        <p style="font-weight: bold; color: #27ae60;">Zahlung erfolgt. Bitte entnehmen Sie Ihr Ticket unten.</p>
+        <h3>Fahrkarte wird ausgegeben...</h3>
         
         <div class="ticket-ausgabe">
             <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
                 <span>Deutsche Bahn</span>
-                <span>NVR-Tarif</span>
+                <span>${buchung.rabatt==='mitarbeiter'?'MITARBEITER-TICKET':'REGIO-TICKET'}</span>
             </div>
-            <div style="margin: 15px 0; font-size: 1.3rem; font-weight: bold; text-align: center;">
-                EINZELTICKET
-            </div>
-            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">Von: Startbahnhof</div>
-            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">Nach: ${zielName}</div>
-            
-            <div style="font-size: 0.9rem;">
-                Klasse: 2. Klasse / Erw. / Einzelfahrt<br>
+            <br>
+            <div><strong>VON:</strong> ${buchung.von}</div>
+            <div><strong>NACH:</strong> ${buchung.nach}</div>
+            <br>
+            <div>Klasse: ${buchung.klasse}. Klasse / 1 Erw.</div>
+            <div>Tarif: ${buchung.rabatt.toUpperCase()}</div>
+            ${buchung.baNummer ? `<div>Pers.-Nr (BA): ${buchung.baNummer}</div>` : ''}
+            <div>Preis: ${endPreis.toFixed(2)} EUR</div>
+            <br>
+            <div style="border-top:1px dashed #000; padding-top:5px; text-align:center; font-size:0.8rem;">
                 Gültig am: ${heute}<br>
-                Preis: ${preis.toFixed(2)} EUR (inkl. MwSt.)
-            </div>
-            <div style="margin-top: 15px; border-top: 1px dashed #000; padding-top: 5px; font-size: 0.8rem; text-align: center; color: #555;">
-                * * * GUTE REISE * * *<br>
-                ID: DB-${Math.floor(100000 + Math.random() * 900000)}
+                * * * GUTE REISE * * *
             </div>
         </div>
     `;
-    
-    // Untere Navigationsleiste zurücksetzen auf den Start-Zustand
-    navigation.innerHTML = `
-        <button class="btn-nav" onclick="location.reload()">🏠 Neuer Kauf</button>
-        <button class="btn-nav" disabled style="opacity: 0.5;">❓ Hilfe</button>
-    `;
+    rendereNavigation("fertig");
 }
+
+function rendereNavigation(schritt) {
+    const nav = document.getElementById('navigation');
+    if (schritt === "start") {
+        nav.innerHTML = `
+            <button class="btn-nav" onclick="location.reload()">🏠 Start</button>
+            <button class="btn-nav">🌐 Sprache</button>
+            <button class="btn-nav">❓ Hilfe</button>
+        `;
+    } else if (schritt === "schritt2") {
+        nav.innerHTML = `
+            <button class="btn-nav cancel" onclick="location.reload()">❌ Abbruch</button>
+            <button class="btn-nav" onclick="zeigeSchritt1()">⬅ Zurück</button>
+        `;
+    } else if (schritt === "zahlung") {
+        nav.innerHTML = `
+            <button class="btn-nav cancel" onclick="location.reload()">❌ Abbruch</button>
+            <button class="btn-nav" onclick="zeigeSchritt2()">⬅ Zurück</button>
+        `;
+    } else if (schritt === "fertig") {
+        nav.innerHTML = `
+            <button class="btn-nav" style="border-color:green; color:green;" onclick="location.reload()">🏠 Fertig / Neuer Kauf</button>
+        `;
+    }
+}
+
+// Initialisierung beim Laden
+zeigeSchritt1();
