@@ -1,9 +1,8 @@
-/* DB Corporate Design Farben */
 :root {
-    --db-rot: #ec0016;       /* Original DB Verkehrsrot */
-    --db-grau-dunkel: #282d37; /* Hintergrund für Gehäuse/Texte */
-    --db-grau-hell: #f0f3f5;   /* Haupt-Hintergrund des Bildschirms */
-    --db-grau-bedien: #e2e7ea;/* Hintergrund für Inaktive Flächen / Buttons */
+    --db-rot: #ec0016;
+    --db-grau-dunkel: #282d37;
+    --db-grau-hell: #f0f3f5;
+    --db-grau-bedien: #e2e7ea;
     --db-weiss: #ffffff;
 }
 
@@ -15,14 +14,12 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    -webkit-user-select: none; /* Verhindert Textmarkierung auf Touchscreens */
     user-select: none;
 }
 
-/* Das Gehäuse des Automaten */
 #automat {
-    width: 500px;
-    height: 720px;
+    width: 550px;
+    height: 760px;
     background-color: var(--db-grau-dunkel);
     border: 6px solid #1a1c20;
     border-radius: 4px;
@@ -33,7 +30,6 @@ body {
     box-shadow: 0 20px 40px rgba(0,0,0,0.7);
 }
 
-/* Der echte DB-Bildschirm */
 .screen {
     background-color: var(--db-grau-hell);
     flex-grow: 1;
@@ -42,7 +38,6 @@ body {
     overflow: hidden;
 }
 
-/* Roter DB-Header */
 .header {
     background-color: var(--db-rot);
     color: var(--db-weiss);
@@ -52,7 +47,6 @@ body {
     align-items: center;
 }
 
-/* Simuliertes DB-Logo */
 .db-logo {
     background-color: var(--db-weiss);
     color: var(--db-rot);
@@ -62,103 +56,133 @@ body {
     border: 3px solid var(--db-rot);
     border-radius: 4px;
     letter-spacing: -1px;
-    line-height: 1;
 }
 
-.header h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: normal;
-}
-
-#uhrzeit {
+#menue-titel {
     font-size: 1.1rem;
     font-weight: bold;
+    color: white;
 }
 
-/* Inhalt des Bildschirms */
 .content {
     padding: 20px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 h3 {
     margin-top: 0;
-    font-size: 1.4rem;
-    color: var(--db-grau-dunkel);
-    font-weight: bold;
+    font-size: 1.3rem;
     border-bottom: 2px solid var(--db-rot);
-    padding-bottom: 8px;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
 }
 
-/* DB Button Grid */
-.button-grid {
+/* Eingabefelder */
+.input-box {
+    background: white;
+    border: 2px solid #bdc3c7;
+    padding: 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+.input-box.active {
+    border-color: var(--db-rot);
+    background-color: #fff9f9;
+}
+
+/* Vorschlagsliste Bahnhöfe */
+.vorschlag-liste {
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+.vorschlag-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-weight: bold;
+}
+.vorschlag-item:active {
+    background-color: var(--db-rot);
+    color: white;
+}
+
+/* Virtuelle Tastatur */
+.tastatur {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 5px;
+    margin-top: auto;
+    background: #d1d7da;
+    padding: 8px;
+    border-radius: 4px;
+}
+.key {
+    background: white;
+    border: 1px solid #a0a5a8;
+    padding: 10px 0;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 2px;
+}
+.key:active {
+    background: var(--db-rot);
+    color: white;
+}
+.key.wide {
+    grid-column: span 2;
+    background: #b0b5b8;
+}
+
+/* Klassen- und Rabatt-Kacheln */
+.optionen-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-    margin-top: 15px;
+    margin-bottom: 15px;
 }
-
-/* Die originalen, grauen DB-Touch-Buttons */
-.btn-db {
-    background-color: var(--db-weiss);
-    color: var(--db-grau-dunkel);
+.opt-card {
+    background: white;
     border: 2px solid #bdc3c7;
-    padding: 20px 15px;
-    font-size: 1.1rem;
+    padding: 15px;
     font-weight: bold;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 90px;
-    box-sizing: border-box;
 }
-
-.btn-db:active {
-    background-color: var(--db-rot);
-    color: var(--db-weiss);
+.opt-card.selected {
     border-color: var(--db-rot);
-}
-
-.btn-db:active .preis-tag {
-    background-color: var(--db-weiss);
+    background-color: #fff0f1;
     color: var(--db-rot);
 }
 
-.preis-tag {
+/* DB Standard Buttons */
+.btn-weiter {
     background-color: var(--db-rot);
-    color: var(--db-weiss);
-    padding: 2px 6px;
-    font-size: 0.9rem;
-    align-self: flex-end;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
-/* DB-Aktionsbuttons (z.B. Bezahlen, Weiter) */
-.btn-action {
-    grid-column: span 2;
-    background-color: var(--db-rot);
-    color: var(--db-weiss);
+    color: white;
     border: none;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
     text-align: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 15px;
 }
-.btn-action:active {
+.btn-weiter:active {
     background-color: #b30010;
 }
 
-/* Untere graue Menüleiste des Bildschirms */
 .footer-nav {
     background-color: var(--db-grau-bedien);
-    padding: 10px 20px;
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     border-top: 1px solid #d1d7da;
@@ -169,7 +193,6 @@ h3 {
     border: 1px solid #b0b5b8;
     padding: 10px 20px;
     font-weight: bold;
-    font-size: 0.9rem;
     cursor: pointer;
 }
 .btn-nav.cancel {
@@ -177,19 +200,15 @@ h3 {
     color: var(--db-rot);
 }
 
-/* Ticket-Druck-Ansicht */
 .ticket-ausgabe {
     background-color: #fffcf0;
     color: #111;
     padding: 20px;
     border: 1px solid #ccc;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     font-family: 'Courier New', Courier, monospace;
-    line-height: 1.4;
     margin-top: 10px;
 }
 
-/* Physische Schlitze ganz unten am Gerät */
 .hardware-leiste {
     background-color: var(--db-grau-dunkel);
     display: flex;
@@ -198,5 +217,4 @@ h3 {
     font-size: 0.75rem;
     color: #7f8c8d;
     text-transform: uppercase;
-    letter-spacing: 1px;
 }
