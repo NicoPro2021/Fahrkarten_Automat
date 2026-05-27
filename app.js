@@ -7,15 +7,25 @@ let buchung = {
     baNummer: ""
 };
 
-// Haltestellen-Datenbank (Simuliert "alle Bahnhöfe")
-const bahnhoefe = [
-    "Berlin Hbf", "Berlin Südkreuz", "Magdeburg Hbf", "Zerbst/Anhalt", 
-    "Halle (Saale) Hbf", "Leipzig Hbf", "München Hbf", "Hamburg Hbf", 
-    "Köln Hbf", "Frankfurt(Main)Hbf", "Dresden Hbf", "Stuttgart Hbf",
-    "Hannover Hbf", "Düsseldorf Hbf", "Nürnberg Hbf"
-];
+// Hier speichern wir die Bahnhöfe aus der JSON-Datei
+let bahnhoefe = [];
 
-let aktivesFeld = "nach"; // Welches Feld wird gerade per Tastatur betippt?
+// LIVE-LADEN DER BAHNHOEFE AUS DER JSON-DATEI
+async function ladeBahnhoefe() {
+    try {
+        const response = await fetch('bahnhoefe.json');
+        bahnhoefe = await response.json();
+        // Sortiere die Bahnhöfe alphabetisch, wie bei der echten DB
+        bahnhoefe.sort();
+        console.log(`${bahnhoefe.length} Bahnhöfe erfolgreich geladen.`);
+    } catch (error) {
+        console.error("Fehler beim Laden der Bahnhofsdaten:", error);
+        // Fallback, falls die Datei mal nicht lädt
+        bahnhoefe = ["Magdeburg Hbf", "Zerbst/Anhalt", "Berlin Hbf"];
+    }
+    // Nach dem Laden die Startseite anzeigen
+    zeigeSchritt1();
+}
 
 function updateUhrzeit() {
     const uhrzeitElement = document.getElementById('uhrzeit');
@@ -25,7 +35,7 @@ function updateUhrzeit() {
 setInterval(updateUhrzeit, 1000);
 updateUhrzeit();
 
-// STARTSEITE: Stationen wählen
+// SCHRITT 1: Stationen wählen
 function zeigeSchritt1() {
     document.getElementById('menue-titel').textContent = "Start / Ziel wählen";
     const display = document.getElementById('display');
@@ -44,6 +54,8 @@ function zeigeSchritt1() {
         <div class="tastatur">
             ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => `<div class="key" onclick="tippeBuchstabe('${l}')">${l}</div>`).join("")}
             <div class="key" onclick="tippeBuchstabe(' ')">LEER</div>
+            <div class="key" onclick="tippeBuchstabe('-')">-</div>
+            <div class="key" onclick="tippeBuchstabe('/')">/</div>
             <div class="key wide" style="background:#e74c3c; color:white;" onclick="loescheBuchstabe()">⌫</div>
         </div>
         
@@ -52,6 +64,8 @@ function zeigeSchritt1() {
     
     rendereNavigation("start");
 }
+
+let aktivesFeld = "nach"; 
 
 function setzeAktivesFeld(feld) {
     aktivesFeld = feld;
@@ -77,10 +91,11 @@ function zeigeVorschlaege() {
     const vDiv = document.getElementById('vorschläge');
     if(suchText.length < 1) { vDiv.style.display = "none"; return; }
     
+    // Durchsuche alle geladenen Bahnhöfe aus der JSON
     const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
     if(treffer.length > 0) {
         vDiv.style.display = "block";
-        vDiv.innerHTML = treffer.map(t => `<div class="vorschlag-item" onclick="waehleVorschlag('${t}')">${t}</div>`).join("");
+        vDiv.innerHTML = treffer.slice(0, 5).map(t => `<div class="vorschlag-item" onclick="waehleVorschlag('${t}')">${t}</div>`).join(""); 
     } else {
         vDiv.style.display = "none";
     }
@@ -143,13 +158,12 @@ function berechneUndZahle() {
     document.getElementById('menue-titel').textContent = "Zahlung";
     const display = document.getElementById('display');
     
-    // Basispreis-Simulation
-    let preis = 15.60;
-    if(buchung.klasse === "1") preis *= 1.6; // Aufpreis 1. Klasse
+    // Basispreis-Simulation (Berechnung basierend auf Buchstaben-Länge als Platzhalter)
+    let preis = Math.abs(buchung.nach.length - buchung.von.length) * 2.10 + 4.20;
+    if(buchung.klasse === "1") preis *= 1.6; 
     
-    // Rabatte anrechnen
-    if(buchung.rabatt === 'bundeswehr') preis = 0.00; // Freifahrt in Uniform
-    if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; // 90% Rabatt für Mitarbeiter
+    if(buchung.rabatt === 'bundeswehr') preis = 0.00; 
+    if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; 
 
     display.innerHTML = `
         <h3>Zahlung</h3>
@@ -228,5 +242,5 @@ function rendereNavigation(schritt) {
     }
 }
 
-// Initialisierung beim Laden
-zeigeSchritt1();
+// Start-Trigger: Lädt die JSON-Datei beim Website-Aufruf
+ladeBahnhoefe();
