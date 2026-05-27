@@ -3,32 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fahrkartenautomat Simulation</title>
+    <title>DB Fahrkartenautomat Simulation</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="automat">
-        <div class="header">
-            <h2>Regio-Ticket Terminal</h2>
-            <div id="uhrzeit">00:00:00</div>
-        </div>
-        
-        <div class="screen" id="display">
-            <h3>Wohin möchten Sie reisen?</h3>
-            <p class="hinweis">Bitte wählen Sie Ihr Reiseziel auf dem Touchscreen aus:</p>
+        <div class="screen">
+            <div class="header">
+                <div class="db-logo">DB</div>
+                <h2>Fahrkarten & Reservierungen</h2>
+                <div id="uhrzeit">00:00</div>
+            </div>
             
-            <div class="button-grid">
-                <button class="btn-ziel" onclick="waehleZiel('Berlin Hbf', 24.50)">Berlin Hbf<br><span class="preis-tag">24,50 €</span></button>
-                <button class="btn-ziel" onclick="waehleZiel('Magdeburg Hbf', 12.00)">Magdeburg Hbf<br><span class="preis-tag">12,00 €</span></button>
-                <button class="btn-ziel" onclick="waehleZiel('Zerbst/Anhalt', 4.20)">Zerbst/Anhalt<br><span class="preis-tag">4,20 €</span></button>
-                <button class="btn-ziel" onclick="waehleZiel('Halle (Saale) Hbf', 18.90)">Halle (Saale) Hbf<br><span class="preis-tag">18,90 €</span></button>
+            <div class="content" id="display">
+                <h3>Verbund- und Regionaltarife</h3>
+                
+                <div class="button-grid">
+                    <button class="btn-db" onclick="waehleZiel('Berlin Hbf', 24.50)">
+                        <span>Berlin Hbf</span>
+                        <span class="preis-tag">24,50 €</span>
+                    </button>
+                    <button class="btn-db" onclick="waehleZiel('Magdeburg Hbf', 12.00)">
+                        <span>Magdeburg Hbf</span>
+                        <span class="preis-tag">12,00 €</span>
+                    </button>
+                    <button class="btn-db" onclick="waehleZiel('Zerbst/Anhalt', 4.20)">
+                        <span>Zerbst/Anhalt</span>
+                        <span class="preis-tag">4,20 €</span>
+                    </button>
+                    <button class="btn-db" onclick="waehleZiel('Halle (Saale) Hbf', 18.90)">
+                        <span>Halle (Saale) Hbf</span>
+                        <span class="preis-tag">18,90 €</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="footer-nav" id="navigation">
+                <button class="btn-nav" onclick="location.reload()">🏠 Start</button>
+                <button class="btn-nav">🌐 Sprache / Language</button>
+                <button class="btn-nav">❓ Hilfe</button>
             </div>
         </div>
         
         <div class="hardware-leiste">
-            <div class="schlitz"> [ 💳 Kartenzahlung ]</div>
-            <div class="schlitz"> [ 🪙 Münzeinwurf ]</div>
+            <div>💳 Karten-Terminal</div>
+            <div>🪙 Münzeinwurf</div>
+            <div>🎟️ Ticket-Ausgabe</div>
         </div>
     </div>
 
