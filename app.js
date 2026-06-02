@@ -9,6 +9,7 @@ let buchung = {
 
 // Hier speichern wir die Bahnhöfe aus der JSON-Datei
 let bahnhoefe = [];
+let aktivesFeld = "nach"; // Welches Feld wird gerade per Tastatur betippt?
 
 // LIVE-LADEN DER BAHNHOEFE AUS DER JSON-DATEI
 async function ladeBahnhoefe() {
@@ -65,8 +66,6 @@ function zeigeSchritt1() {
     rendereNavigation("start");
 }
 
-let aktivesFeld = "nach"; 
-
 function setzeAktivesFeld(feld) {
     aktivesFeld = feld;
     zeigeSchritt1();
@@ -91,7 +90,6 @@ function zeigeVorschlaege() {
     const vDiv = document.getElementById('vorschläge');
     if(suchText.length < 1) { vDiv.style.display = "none"; return; }
     
-    // Durchsuche alle geladenen Bahnhöfe aus der JSON
     const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
     if(treffer.length > 0) {
         vDiv.style.display = "block";
@@ -158,7 +156,7 @@ function berechneUndZahle() {
     document.getElementById('menue-titel').textContent = "Zahlung";
     const display = document.getElementById('display');
     
-    // Basispreis-Simulation (Berechnung basierend auf Buchstaben-Länge als Platzhalter)
+    // Basispreis-Simulation
     let preis = Math.abs(buchung.nach.length - buchung.von.length) * 2.10 + 4.20;
     if(buchung.klasse === "1") preis *= 1.6; 
     
@@ -185,14 +183,18 @@ function berechneUndZahle() {
     rendereNavigation("zahlung");
 }
 
-// SCHRITT 4: Ticketdruck
+// SCHRITT 4: Ticketdruck & Hardware-Schnittstelle
 function druckeTicket(endPreis) {
     document.getElementById('menue-titel').textContent = "Ticket-Druck";
     const display = document.getElementById('display');
     const heute = new Date().toLocaleDateString('de-DE');
     
+    // UI auf dem Bildschirm aktualisieren
     display.innerHTML = `
         <h3>Fahrkarte wird ausgegeben...</h3>
+        <p style="font-weight: bold; color: #27ae60; text-align:center;">
+            Bitte entnehmen Sie Ihr gedrucktes Ticket am Automaten!
+        </p>
         
         <div class="ticket-ausgabe">
             <div style="display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
@@ -215,6 +217,34 @@ function druckeTicket(endPreis) {
         </div>
     `;
     rendereNavigation("fertig");
+
+    // HARDWARE-ANSTEUERUNG: Sende Daten an das lokale Python-Skript des Pi
+    const ticketDaten = {
+        von: buchung.von,
+        nach: buchung.nach,
+        klasse: buchung.klasse,
+        rabatt: buchung.rabatt,
+        baNummer: buchung.baNummer,
+        preis: endPreis
+    };
+
+    fetch('http://localhost:5000/print-ticket', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(ticketDaten)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Drucker-Server Rückmeldung:", data);
+        if(data.status === "error") {
+            console.error("Druckfehler über Python:", data.message);
+        }
+    })
+    .catch(error => {
+        console.warn("Drucker-Server offline oder nicht erreichbar. Ticket wird nur auf dem Screen angezeigt.", error);
+    });
 }
 
 function rendereNavigation(schritt) {
@@ -237,10 +267,10 @@ function rendereNavigation(schritt) {
         `;
     } else if (schritt === "fertig") {
         nav.innerHTML = `
-            <button class="btn-nav" style="border-color:green; color:green;" onclick="location.reload()">🏠 Fertig / Neuer Kauf</button>
+            <button class="btn-nav" style="border-color:green; color:green;" onclick="location.reload()">🏠 Neuer Kauf</button>
         `;
     }
 }
 
-// Start-Trigger: Lädt die JSON-Datei beim Website-Aufruf
+// Start-Trigger beim Laden der Seite
 ladeBahnhoefe();
