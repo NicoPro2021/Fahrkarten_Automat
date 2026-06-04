@@ -1,1 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abfahrtstafel Bad Belzig</title>
+    <style>
+        body {
+            background-color: #0b0b0e;
+            color: #f1f1f1;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            overflow: hidden;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #333;
+            padding-bottom: 15px;
+        }
+        h1 {
+            font-size: 2.8rem;
+            margin: 0;
+            color: #ffb703;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .uhrzeit {
+            font-size: 2.2rem;
+            color: #888;
+            font-weight: bold;
+        }
+        .tabelle {
+            margin-top: 25px;
+            width: 100%;
+        }
+        .zeile {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 2.3rem;
+            padding: 20px 0;
+            border-bottom: 1px solid #222;
+        }
+        .zeile.kopf {
+            font-size: 1.5rem;
+            color: #666;
+            text-transform: uppercase;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #444;
+        }
+        .linie {
+            color: #00f5d4;
+            font-weight: bold;
+            width: 15%;
+        }
+        .ziel {
+            width: 65%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .zeit {
+            color: #ff0054;
+            text-align: right;
+            width: 20%;
+            font-variant-numeric: tabular-nums;
+        }
+        .btn-drucken {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #ffb703;
+            color: #023047;
+            border: none;
+            padding: 25px 50px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255,183,3,0.3);
+            transition: all 0.2s ease;
+        }
+        .btn-drucken:active {
+            transform: scale(0.95);
+            background-color: #fb8500;
+        }
+        .btn-drucken:disabled {
+            background-color: #555;
+            color: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Bad Belzig &bull; Abfahrten</h1>
+        <div class="uhrzeit" id="live-uhr">00:00:00</div>
+    </div>
+
+    <div class="tabelle">
+        <div class="zeile kopf">
+            <span class="linie">Linie</span>
+            <span class="ziel">Fahrtziel</span>
+            <span class="zeit">Abfahrt</span>
+        </div>
+        <div id="abfahrten-liste">
+            <div class="zeile">
+                <span style="color: #888;">Lade aktuelle Abfahrtszeiten...</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-drucken" onclick="drucken()")>Beleg drucken</button>
+
+    <script>
+        // Live-Uhrzeit oben rechts aktualisieren
+        function updateUhr() {
+            const jetzt = new Date();
+            document.getElementById('live-uhr').innerText = jetzt.toLocaleTimeString('de-DE');
+        }
+        setInterval(updateUhr, 1000);
+        updateUhr();
+
+        // Abfahrten vom eigenen Node.js Server abrufen
+        async function ladeAbfahrten() {
+            try {
+                const response = await fetch('/api/abfahrten');
+                let daten = await response.json();
+                
+                // Falls die Daten im GitHub-JSON in "departures" stecken:
+                if (!Array.isArray(daten) && daten.departures) {
+                    daten = daten.departures;
+                }
+
+                const liste = document.getElementById('abfahrten-liste');
+                liste.innerHTML = ''; 
+
+                if (!Array.isArray(daten) || daten.length === 0) {
+                    liste.innerHTML = '<div class="zeile"><span style="color: #666;">Keine aktuellen Abfahrten gefunden.</span></div>';
+                    return;
+                }
+
+                // Generiere die Zeilen für die Website
+                daten.forEach(fahrt => {
+                    const linie = fahrt.line || fahrt.linie || fahrt.name || "Bus";
+                    const ziel = fahrt.direction || fahrt.ziel || fahrt.to || "Unbekannt";
+                    const zeit = fahrt.time || fahrt.zeit || fahrt.when || "";
+
+                    const zeile = document.createElement('div');
+                    zeile.className = 'zeile';
+                    zeile.innerHTML = `
+                        <span class="linie">${linie}</span>
+                        <span class="ziel">${ziel}</span>
+                        <span class="zeit">${zeit}</span>
+                    `;
+                    liste.appendChild(zeile);
+                });
+            } catch (error) {
+                document.getElementById('abfahrten-liste').innerHTML = 
+                    '<div class="zeile"><span style="color:#ff0054">Verbindungsfehler zum GitHub-Server!</span></div>';
+            }
+        }
+
+        // Befehl zum Drucken an den Server senden
+        async function drucken() {
+            const btn = document.querySelector('.btn-drucken');
+            const originalText = btn.innerText;
+            btn.innerText = "Druckt...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/drucken', { method: 'POST' });
+                const result = await res.json();
+                if(!result.success) alert("Druckfehler: " + result.error);
+            } catch (error) {
+                alert('Server-Druckfunktion reagiert nicht.');
+            }
+
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }, 3000); // 3 Sekunden Sperre gegen doppeltes Klicken
+        }
+
+        // Initialer Start und automatisches Update alle 20 Sekunden
+        ladeAbfahrten();
+        setInterval(ladeAbfahrten, 20000);
+    </script>
+</body>
+</html>
 
