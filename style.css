@@ -1,4 +1,3 @@
-/* DB Corporate Design Farben & Variablen */
 :root {
     --db-rot: #ec0016;       
     --db-grau-dunkel: #282d37; 
@@ -8,283 +7,100 @@
 }
 
 html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100vh;
+    margin: 0; padding: 0; width: 100%; height: 100vh;
     background-color: var(--db-grau-dunkel);
     font-family: 'Arial', sans-serif;
-    overflow: hidden; /* Knallhart fixiert für Querformat */
-    -webkit-user-select: none; 
-    user-select: none;
+    overflow: hidden;
+    -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
 #automat {
-    width: 100vw;
-    height: 100vh;
-    background-color: var(--db-grau-dunkel);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-sizing: border-box;
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;
 }
 
-.screen {
-    background-color: var(--db-grau-hell);
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+.screen { background-color: var(--db-grau-hell); flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .header {
-    background-color: var(--db-rot);
-    color: var(--db-weiss);
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 50px;
-    box-sizing: border-box;
+    background-color: var(--db-rot); color: var(--db-weiss);
+    padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; box-sizing: border-box;
 }
 
 .db-logo {
-    background-color: var(--db-weiss);
-    color: var(--db-rot);
-    font-weight: 900;
-    font-size: 1.4rem;
-    padding: 1px 10px;
-    border: 3px solid var(--db-rot);
-    border-radius: 4px;
-    letter-spacing: -1px;
+    background-color: var(--db-weiss); color: var(--db-rot); font-weight: 900; font-size: 1.4rem; padding: 1px 10px; border-radius: 4px;
 }
 
-#menue-titel, #uhrzeit {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: white;
-}
+.content { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
 
-.content {
-    padding: 15px 20px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    overflow: hidden; /* Verhindert jegliches Scrollen im Hauptfenster */
-    box-sizing: border-box;
-}
+h3 { margin: 0 0 10px 0; font-size: 1.2rem; border-bottom: 2px solid var(--db-rot); padding-bottom: 4px; color: var(--db-grau-dunkel); }
 
-h3 {
-    margin-top: 0;
-    font-size: 1.2rem;
-    border-bottom: 2px solid var(--db-rot);
-    padding-bottom: 6px;
-    margin-bottom: 10px;
-    color: var(--db-grau-dunkel);
+/* Startseiten-Layout für Querformat */
+.station-container {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 10px;
 }
-
-/* NEU: Das Kiosk-Layout teilt sich im Querformat auf, wenn getippt wird */
-.querformat-wrapper {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr; /* Links Felder/Ergebnisse, rechts Tastatur */
-    gap: 20px;
-    flex-grow: 1;
-    align-items: stretch;
-    overflow: hidden;
+.station-row {
+    display: flex; align-items: center; justify-content: space-between; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ccc;
 }
-
-.links-box {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
+.station-row label { font-weight: bold; font-size: 1.1rem; width: 180px; }
 .input-box {
-    background: white;
-    border: 2px solid #bdc3c7;
-    padding: 10px 14px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-    border-radius: 4px;
-    cursor: pointer;
-    min-height: 45px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
+    flex-grow: 1; border: 2px dashed #bdc3c7; padding: 12px; font-size: 1.3rem; font-weight: bold; border-radius: 4px; cursor: pointer; background: #fafafa;
 }
-.input-box .placeholder {
-    color: #95a5a6;
-    font-weight: normal;
-    font-style: italic;
-}
-.input-box.active {
-    border-color: var(--db-rot);
-    background-color: #fff9f9;
-}
+.input-box .placeholder { color: #95a5a6; font-weight: normal; }
 
-.such-label {
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: var(--db-grau-dunkel);
-    margin-top: 5px;
-    margin-bottom: 3px;
+/* ========================================== */
+/* VOLLBILD-SUCHMASKE (OVERLAY FÜR QUERFORMAT) */
+/* ========================================== */
+.search-overlay {
+    position: absolute; top: 50px; left: 0; right: 0; bottom: 60px;
+    background: var(--db-grau-hell); z-index: 100; padding: 15px;
+    display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;
 }
+.search-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.search-current-value { font-size: 1.4rem; font-weight: 900; color: var(--db-rot); background: white; padding: 5px 15px; border: 2px solid var(--db-rot); border-radius: 4px; }
 
-.vorschlag-liste {
-    background: white;
-    border: 2px solid var(--db-rot);
-    flex-grow: 1; /* Nutzt den restlichen Platz links perfekt aus */
-    overflow-y: auto;
-    border-radius: 4px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+/* Suchergebnisse nebeneinander im Querformat */
+.search-results-container {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;
 }
-.vorschlag-item {
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: var(--db-grau-dunkel);
-    cursor: pointer;
+.vorschlag-item-fullscreen {
+    background: white; border: 2px solid #a0a5a8; padding: 14px; font-weight: bold; font-size: 1.2rem; border-radius: 4px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.vorschlag-item:active {
-    background-color: var(--db-rot);
-    color: white;
-}
+.vorschlag-item-fullscreen:active { background: var(--db-rot); color: white; border-color: var(--db-rot); }
+.such-kein-treffer { grid-column: span 3; text-align: center; color: #7f8c8d; font-style: italic; font-size: 1.1rem; padding: 10px; }
 
-/* Rechte Spalte: Die kompakte Querformat-Tastatur */
-.tastatur-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 100%;
+/* Die breite Querformat-Tastatur unten */
+.tastatur-fullscreen {
+    display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background: #d1d7da; padding: 6px; border-radius: 4px;
 }
+.key-fs {
+    background: white; border: 1px solid #a0a5a8; padding: 12px 0; text-align: center; font-weight: bold; font-size: 1.2rem; border-radius: 4px; box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+.key-fs:active { background: var(--db-rot); color: white; }
+.key-fs.wide-fs { grid-column: span 2; background: #b0b5b8; }
+.btn-schliessen-fs { background: #7f8c8d; color: white; border: none; padding: 8px; font-weight: bold; border-radius: 4px; margin-top: 5px; }
 
-.tastatur {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 statt 10 Spalten -> schmaler und höher für Querformat! */
-    gap: 5px;
-    background: #d1d7da;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #b5bcc0;
-}
-.key {
-    background: white;
-    border: 1px solid #a0a5a8;
-    padding: 12px 0; /* Optimierte Touchhöhe im Querformat */
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.1rem;
-    border-radius: 4px;
-    box-shadow: 0 2px 3px rgba(0,0,0,0.15);
-}
-.key:active {
-    background: var(--db-rot);
-    color: white;
-}
-.key.wide {
-    grid-column: span 2;
-    background: #b0b5b8;
-}
+/* Optionen, Zahlung & Co */
+.optionen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+.opt-card { background: white; border: 2px solid #bdc3c7; padding: 15px; font-weight: bold; font-size: 1.2rem; text-align: center; border-radius: 4px; }
+.opt-card.selected { border-color: var(--db-rot); background-color: #fff0f1; color: var(--db-rot); }
+.btn-weiter { background-color: var(--db-rot); color: white; border: none; padding: 14px; font-size: 1.2rem; font-weight: bold; border-radius: 4px; cursor: pointer; }
 
-.btn-schliessen {
-    background: #7f8c8d;
-    color: white;
-    border: none;
-    padding: 8px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    border-radius: 4px;
-    margin-top: 5px;
-    cursor: pointer;
-}
+.payment-layout { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+.print-toggle-section { background: white; padding: 10px; border: 1px solid #ccc; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
 
-/* Optionen, Zahlung & Tickets (bleiben im Vollbild, skaliert für Querformat) */
-.optionen-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 Spalten nebeneinander nutzt die Breite im Querformat aus! */
-    gap: 15px;
-    margin-bottom: 10px;
-}
-.opt-card {
-    background: white;
-    border: 2px solid #bdc3c7;
-    padding: 15px;
-    font-weight: bold;
-    font-size: 1.1rem;
-    text-align: center;
-    border-radius: 4px;
-}
-.opt-card.selected {
-    border-color: var(--db-rot);
-    background-color: #fff0f1;
-    color: var(--db-rot);
-}
-
-.btn-weiter {
-    background-color: var(--db-rot);
-    color: white;
-    border: none;
-    padding: 15px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-align: center;
-    border-radius: 4px;
-}
-
-.footer-nav {
-    background-color: var(--db-grau-bedien);
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    border-top: 2px solid #b5bcc0;
-    height: 60px;
-    box-sizing: border-box;
-}
-
-.btn-nav {
-    background-color: var(--db-weiss);
-    border: 1px solid #b0b5b8;
-    padding: 0 25px;
-    font-weight: bold;
-    font-size: 1rem;
-    height: 100%;
-    border-radius: 4px;
-}
+.footer-nav { background-color: var(--db-grau-bedien); padding: 10px 20px; display: flex; justify-content: space-between; border-top: 2px solid #b5bcc0; height: 60px; box-sizing: border-box; }
+.btn-nav { background-color: var(--db-weiss); border: 1px solid #b0b5b8; padding: 0 25px; font-weight: bold; height: 100%; border-radius: 4px; }
 .btn-nav.cancel { color: var(--db-rot); border-color: var(--db-rot); }
 
-.ticket-ausgabe {
-    background-color: #fffcf0;
-    color: #111;
-    padding: 15px;
-    border: 2px dashed #999;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1rem;
-    max-width: 500px;
-    margin: 0 auto; /* Zentriert im Querformat */
-}
+.ticket-ausgabe { background-color: #fffcf0; padding: 15px; border: 2px dashed #999; font-family: 'Courier New', monospace; max-width: 450px; margin: 0 auto; }
+.hardware-leiste { background-color: var(--db-grau-dunkel); display: flex; justify-content: space-around; padding: 8px; font-size: 0.8rem; color: #95a5a6; text-transform: uppercase; border-top: 1px solid #34495e; }
 
-.hardware-leiste {
-    background-color: var(--db-grau-dunkel);
-    display: flex;
-    justify-content: space-around;
-    padding: 8px;
-    font-size: 0.8rem;
-    color: #95a5a6;
-    text-transform: uppercase;
-    border-top: 1px solid #34495e;
-}
-.hw-slot { display: flex; align-items: center; gap: 6px; }
-
-/* TOGGLE SWITCH STYLE */
-.switch { position: relative; display: inline-block; width: 46px; height: 22px; }
+/* TOGGLE SWITCH */
+.switch { position: relative; display: inline-block; width: 44px; height: 22px; }
 .switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; }
-.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 4px; bottom: 4px; background-color: white; transition: .3s; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 22px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
 input:checked + .slider { background-color: #27ae60; }
-input:checked + .slider:before { transform: translateX(24px); }
-.slider.round { border-radius: 22px; }
-.slider.round:before { border-radius: 50%; }
+input:checked + .slider:before { transform: translateX(22px); }
+               
