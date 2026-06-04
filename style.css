@@ -16,8 +16,10 @@ html, body {
     background-color: var(--db-grau-dunkel);
     font-family: 'Arial', sans-serif;
     overflow: hidden;
+    /* Verhindert blaue Markierungskästen beim schnellen Tippen auf dem Touchscreen */
     -webkit-user-select: none; 
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Das Automaten-Gehäuse passt sich jetzt JEDEM Display flexibel an */
@@ -85,6 +87,11 @@ html, body {
     box-sizing: border-box;
 }
 
+/* Scrollbalken für Chromium im Kiosk-Modus unsichtbar machen */
+.content::-webkit-scrollbar, .vorschlag-liste::-webkit-scrollbar {
+    display: none;
+}
+
 h3 {
     margin-top: 0;
     font-size: 1.4rem;
@@ -94,34 +101,43 @@ h3 {
     color: var(--db-grau-dunkel);
 }
 
-/* Eingabefelder */
+/* Eingabefelder mit weicherem DB-Interaktions-Design */
 .input-box {
     background: white;
     border: 2px solid #bdc3c7;
-    padding: 12px;
+    padding: 14px;
     font-size: 1.3rem;
     font-weight: bold;
     margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 .input-box.active {
     border-color: var(--db-rot);
     background-color: #fff9f9;
+    box-shadow: 0 0 0 2px rgba(236, 0, 22, 0.1);
 }
 
 /* Vorschlagsliste Bahnhöfe */
 .vorschlag-liste {
     background: white;
-    border: 1px solid #ccc;
-    max-height: 140px;
+    border: 2px solid var(--db-rot);
+    border-top: none;
+    max-height: 160px;
     overflow-y: auto;
-    margin-bottom: 10px;
+    margin-top: -10px;
+    margin-bottom: 15px;
     z-index: 10;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 0 0 4px 4px;
 }
 .vorschlag-item {
-    padding: 12px;
+    padding: 14px;
     border-bottom: 1px solid #eee;
     font-weight: bold;
     font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--db-grau-dunkel);
 }
 .vorschlag-item:active {
     background-color: var(--db-rot);
@@ -132,29 +148,35 @@ h3 {
 .tastatur {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
-    gap: 6px;
+    gap: 8px;
     margin-top: auto;
     background: #d1d7da;
-    padding: 10px;
+    padding: 12px;
     border-radius: 4px;
+    border: 1px solid #b5bcc0;
 }
 .key {
     background: white;
     border: 1px solid #a0a5a8;
-    padding: 15px 0; /* Größere Touch-Fläche für die Finger */
+    padding: 18px 0; /* Perfekte Touch-Fläche für 3.5" bis 7" Displays */
     text-align: center;
     font-weight: bold;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    box-shadow: 0 2px 3px rgba(0,0,0,0.15);
+    transition: background 0.05s;
 }
 .key:active {
     background: var(--db-rot);
     color: white;
+    border-color: #b30010;
 }
+/* Belegt zwei Spalten für ein sauberes Grid-Ende */
 .key.wide {
     grid-column: span 2;
     background: #b0b5b8;
+    color: var(--db-grau-dunkel);
 }
 
 /* Kacheln für Klasse und Rabatte */
@@ -167,28 +189,33 @@ h3 {
 .opt-card {
     background: white;
     border: 2px solid #bdc3c7;
-    padding: 20px;
+    padding: 22px;
     font-weight: bold;
     font-size: 1.2rem;
     text-align: center;
     border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 .opt-card.selected {
     border-color: var(--db-rot);
     background-color: #fff0f1;
     color: var(--db-rot);
+    box-shadow: 0 0 0 1px var(--db-rot);
 }
 
 .btn-weiter {
     background-color: var(--db-rot);
     color: white;
     border: none;
-    padding: 18px;
+    padding: 20px;
     font-size: 1.3rem;
     font-weight: bold;
     text-align: center;
     border-radius: 4px;
     margin-top: 15px;
+    cursor: pointer;
+    box-shadow: 0 3px 6px rgba(236,0,22,0.2);
 }
 .btn-weiter:active {
     background-color: #b30010;
@@ -200,43 +227,62 @@ h3 {
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
-    border-top: 1px solid #d1d7da;
-    height: 70px;
+    border-top: 2px solid #b5bcc0;
+    height: 75px;
     box-sizing: border-box;
 }
 
 .btn-nav {
     background-color: var(--db-weiss);
     border: 1px solid #b0b5b8;
-    padding: 0 25px;
+    padding: 0 30px;
     font-weight: bold;
     font-size: 1.1rem;
     height: 100%;
     border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.btn-nav:active {
+    background-color: #f0f3f5;
 }
 .btn-nav.cancel {
     border-color: var(--db-rot);
     color: var(--db-rot);
 }
+.btn-nav.cancel:active {
+    background-color: #fff0f1;
+}
 
-/* Fahrkarten-Design */
+/* Fahrkarten-Vorschau auf dem Screen */
 .ticket-ausgabe {
     background-color: #fffcf0;
     color: #111;
     padding: 20px;
-    border: 1px solid #ccc;
+    border: 2px dashed #999;
     font-family: 'Courier New', Courier, monospace;
     margin-top: 10px;
     font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    border-radius: 2px;
 }
 
-/* Physische Leiste ganz unten */
+/* Physische Leiste ganz unten (Automaten-Dekoration) */
 .hardware-leiste {
     background-color: var(--db-grau-dunkel);
     display: flex;
     justify-content: space-around;
-    padding: 10px;
-    font-size: 0.8rem;
-    color: #7f8c8d;
+    padding: 12px;
+    font-size: 0.85rem;
+    color: #95a5a6;
     text-transform: uppercase;
+    border-top: 1px solid #34495e;
+    letter-spacing: 1px;
 }
+.hw-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    
