@@ -12,6 +12,7 @@
             margin: 0;
             padding: 30px;
             overflow: hidden;
+            user-select: none; /* Verhindert versehentliches Markieren auf Touchscreens */
         }
         .header {
             display: flex;
@@ -115,7 +116,7 @@
         </div>
     </div>
 
-    <button class="btn-drucken" onclick="drucken()")>Beleg drucken</button>
+    <button class="btn-drucken" onclick="drucken()">Beleg drucken</button>
 
     <script>
         // Live-Uhrzeit oben rechts aktualisieren
@@ -162,29 +163,34 @@
                 });
             } catch (error) {
                 document.getElementById('abfahrten-liste').innerHTML = 
-                    '<div class="zeile"><span style="color:#ff0054">Verbindungsfehler zum GitHub-Server!</span></div>';
+                    '<div class="zeile"><span style="color:#ff0054">Verbindungsfehler! Aktualisierung läuft...</span></div>';
             }
         }
 
         // Befehl zum Drucken an den Server senden
         async function drucken() {
-            const btn = document.querySelector('.btn-drucken');
-            const originalText = btn.innerText;
-            btn.innerText = "Druckt...";
-            btn.disabled = true;
+            const btn = document.querySelector('.btn-contrib');
+            const btnDruck = document.querySelector('.btn-drucken');
+            const originalText = btnDruck.innerText;
+            
+            btnDruck.innerText = "Druckt...";
+            btnDruck.disabled = true;
 
             try {
                 const res = await fetch('/api/drucken', { method: 'POST' });
                 const result = await res.json();
-                if(!result.success) alert("Druckfehler: " + result.error);
+                if(!result.success) {
+                    alert("Druckfehler: " + result.error);
+                }
             } catch (error) {
-                alert('Server-Druckfunktion reagiert nicht.');
+                alert('Der Server antwortet nicht. Ist der Drucker angeschlossen?');
             }
 
+            // Button nach 3 Sekunden wieder freigeben
             setTimeout(() => {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }, 3000); // 3 Sekunden Sperre gegen doppeltes Klicken
+                btnDruck.innerText = originalText;
+                btnDruck.disabled = false;
+            }, 3000); 
         }
 
         // Initialer Start und automatisches Update alle 20 Sekunden
@@ -193,4 +199,3 @@
     </script>
 </body>
 </html>
-
