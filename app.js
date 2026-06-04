@@ -1,30 +1,30 @@
 // Globale Buchungsdaten
 let buchung = {
-    von: "Magdeburg Hbf", // Standard-Start
+    von: "Magdeburg Hbf", 
     nach: "",
     klasse: "2",
     rabatt: "kein",
-    baNummer: ""
+    baNummer: "",
+    gutscheinCode: "",
+    gutscheinRabatt: 0, // Prozentualer Rabatt (z.B. 0.20 für 20%)
+    echtDrucken: true   // Steuert, ob der Pi-Drucker angesteuert wird
 };
 
 // Hier speichern wir die Bahnhöfe aus der JSON-Datei
 let bahnhoefe = [];
-let aktivesFeld = "nach"; // Welches Feld wird gerade per Tastatur betippt?
+let aktivesFeld = "nach"; 
 
 // LIVE-LADEN DER BAHNHOEFE AUS DER JSON-DATEI
 async function ladeBahnhoefe() {
     try {
         const response = await fetch('bahnhoefe.json');
         bahnhoefe = await response.json();
-        // Sortiere die Bahnhöfe alphabetisch, wie bei der echten DB
         bahnhoefe.sort();
         console.log(`${bahnhoefe.length} Bahnhöfe erfolgreich geladen.`);
     } catch (error) {
         console.error("Fehler beim Laden der Bahnhofsdaten:", error);
-        // Fallback, falls die Datei mal nicht lädt
         bahnhoefe = ["Magdeburg Hbf", "Zerbst/Anhalt", "Berlin Hbf"];
     }
-    // Nach dem Laden die Startseite anzeigen
     zeigeSchritt1();
 }
 
@@ -154,14 +154,14 @@ function zeigeSchritt2() {
     rendereNavigation("schritt2");
 }
 
-// SCHRITT 3: Preisberechnung und Bezahlung
+// SCHRITT 3: Preisberechnung, Rabatt-Codes und Druckabfrage
 function berechneUndZahle() {
     if(buchung.rabatt === 'mitarbeiter' && !buchung.baNummer) {
         alert("Für den Mitarbeitertarif wird eine gültige BA-Nummer benötigt!");
         return;
     }
 
-    document.getElementById('menue-titel').textContent = "Zahlung";
+    document.getElementById('menue-titel').textContent = "Zahlung & Optionen";
     const display = document.getElementById('display');
 
     // Basispreis-Simulation
@@ -171,18 +171,43 @@ function berechneUndZahle() {
     if(buchung.rabatt === 'bundeswehr') preis = 0.00; 
     if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; 
 
-    // Wir runden hier direkt im JS auf zwei Nachkommastellen ab
+    // Rabattcode-Server Abfrage
+    if (buchung.gutscheinRabatt > 0) {
+        preis = preis * (1 - buchung.gutscheinRabatt);
+    }
+
     const gerundeterPreis = parseFloat(preis.toFixed(2));
 
     display.innerHTML = `
         <h3>Zahlung</h3>
-        <div style="background:white; padding:15px; border:1px solid #ccc; margin-bottom:15px;">
+        <div style="background:white; padding:15px; border:1px solid #ccc; margin-bottom:15px; border-radius:4px;">
             <p><strong>Verbindung:</strong> ${buchung.von} ➔ ${buchung.nach}</p>
             <p><strong>Klasse:</strong> ${buchung.klasse}. Klasse</p>
             <p><strong>Tarif:</strong> ${buchung.rabatt === 'mitarbeiter' ? `Mitarbeiter-Rabatt (BA: ${buchung.baNummer})` : buchung.rabatt === 'bundeswehr' ? 'Bundeswehr Freifahrt' : 'Normaltarif'}</p>
+            ${buchung.gutscheinCode ? `<p style="color:green;"><strong>Gutschein angewendet:</strong> ${buchung.gutscheinCode} (-${buchung.gutscheinRabatt * 100}%)</p>` : ''}
+        </div>
+
+        <div class="discount-section" style="background:#eaeded; padding:12px; margin-bottom:15px; border-radius:4px;">
+            <label style="font-weight:bold; font-size:0.9rem; display:block; margin-bottom:5px;">Gutscheincode / Rabattcode:</label>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="couponInput" placeholder="z.B. BAHN50" value="${buchung.gutscheinCode}" style="flex-grow:1; padding:8px; font-size:1rem; border:1px solid #a0a5a8; text-transform:uppercase;">
+                <button onclick="loeseGutscheineInLine()" style="background:var(--db-grau-dunkel); color:white; border:none; padding:8px 15px; font-weight:bold; border-radius:4px;">Einlösen</button>
+            </div>
+            <div id="couponStatus" style="font-size:0.85rem; margin-top:5px; font-weight:bold;"></div>
+        </div>
+
+        <div class="print-toggle-section" style="background:white; padding:15px; border:2px solid #bdc3c7; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border-radius:4px;">
+            <div>
+                <strong style="display:block; font-size:1.05rem;">Ticket physisch drucken?</strong>
+                <span style="font-size:0.85rem; color:#7f8c8d;">Schalte dies aus, um Papier auf der Bonrolle zu sparen.</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="printToggle" ${buchung.echtDrucken ? 'checked' : ''} onchange="buchung.echtDrucken=this.checked">
+                <span class="slider round"></span>
+            </label>
         </div>
         
-        <p style="font-size: 1.6rem; color: var(--db-rot); font-weight: bold; text-align:center; margin: 15px 0;">
+        <p style="font-size: 1.8rem; color: var(--db-rot); font-weight: bold; text-align:center; margin: 20px 0;">
             Gesamtpreis: ${gerundeterPreis.toFixed(2).replace('.', ',')} €
         </p>
         
@@ -194,19 +219,40 @@ function berechneUndZahle() {
     rendereNavigation("zahlung");
 }
 
+function loeseGutscheineInLine() {
+    const code = document.getElementById('couponInput').value.trim().toUpperCase();
+    const statusDiv = document.getElementById('couponStatus');
+    
+    // Rabatt-Datenbank (Gutschein-Server)
+    const rabattServer = {
+        "PROZENT20": 0.20,
+        "BAHN50": 0.50,
+        "FREI": 1.00
+    };
+
+    if (code in rabattServer) {
+        buchung.gutscheinCode = code;
+        buchung.gutscheinRabatt = rabattServer[code];
+        statusDiv.style.color = "green";
+        statusDiv.innerText = `Code gültig! -${rabattServer[code]*100}% Rabatt angewendet.`;
+        setTimeout(berechneUndZahle, 800);
+    } else {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "Code ungültig oder abgelaufen!";
+    }
+}
+
 // SCHRITT 4: Ticketdruck & Hardware-Schnittstelle
 function druckeTicket(endPreis) {
     document.getElementById('menue-titel').textContent = "Ticket-Druck";
     const display = document.getElementById('display');
     const heute = new Date().toLocaleDateString('de-DE');
-
-    // Wir erzeugen einen perfekt formatierten String für das UI und die Übertragung
     const preisString = endPreis.toFixed(2).replace('.', ',');
 
     display.innerHTML = `
-        <h3>Fahrkarte wird ausgegeben...</h3>
+        <h3>${buchung.echtDrucken ? 'Fahrkarte wird ausgegeben...' : 'Virtuelles Ticket erstellt'}</h3>
         <p style="font-weight: bold; color: #27ae60; text-align:center;">
-            Bitte entnehmen Sie Ihr gedrucktes Ticket am Automaten!
+            ${buchung.echtDrucken ? 'Bitte entnehmen Sie Ihr gedrucktes Ticket am Automaten!' : 'Papierloser Druck aktiv. Ihr Ticket ist auf dem Screen sichtbar.'}
         </p>
         
         <div class="ticket-ausgabe">
@@ -221,47 +267,40 @@ function druckeTicket(endPreis) {
             <div>Klasse: ${buchung.klasse}. Klasse / 1 Erw.</div>
             <div>Tarif: ${buchung.rabatt.toUpperCase()}</div>
             ${buchung.baNummer ? `<div>Pers.-Nr (BA): ${buchung.baNummer}</div>` : ''}
+            ${buchung.gutscheinCode ? `<div>RABATT-CODE: ${buchung.gutscheinCode}</div>` : ''}
             <div>Preis: ${preisString} EUR</div>
             <br>
             <div style="border-top:1px dashed #000; padding-top:5px; text-align:center; font-size:0.8rem;">
                 Gültig am: ${heute}<br>
+                ${buchung.echtDrucken ? '* * * PHYSISCHER DRUCK * * *' : '* * * DIGITAL-TICKET * * *'}<br>
                 * * * GUTE REISE * * *
             </div>
         </div>
     `;
     rendereNavigation("fertig");
 
-    // HARDWARE-ANSTEUERUNG: Sende Daten an den Flask-Server auf dem Pi
-    // Wir übergeben den Preis direkt als sauberen String, um Floating-Point-Fehler im Python zu kappen
-    const ticketDaten = {
-        von: buchung.von.trim(),
-        nach: buchung.nach.trim(),
-        klasse: buchung.klasse === "1" ? "1. Klasse" : "2. Klasse",
-        rabatt: buchung.rabatt,
-        baNummer: buchung.baNummer,
-        preis: preisString,  // Überträgt z.B. "29,40" statt 29.400000002
-        datum: "Sofortiger Fahrtantritt" // Das hat gefehlt!
-    };
+    // Nur an den Pi senden, wenn Hardware-Druck aktiv ist
+    if (buchung.echtDrucken) {
+        const ticketDaten = {
+            von: buchung.von.trim(),
+            nach: buchung.nach.trim(),
+            klasse: buchung.klasse === "1" ? "1. Klasse" : "2. Klasse",
+            rabatt: buchung.gutscheinCode ? `${buchung.rabatt.toUpperCase()} + ${buchung.gutscheinCode}` : buchung.rabatt,
+            baNummer: buchung.baNummer,
+            preis: preisString,  
+            datum: "Sofortiger Fahrtantritt"
+        };
 
-    // Geändert auf localhost:5000 (oder 127.0.0.1:5000) wie in deinem Chromium-Aufruf freigegeben
-    fetch('http://127.0.0.1:5000/print-ticket', {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(ticketDaten)
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("Drucker-Server Rückmeldung:", data);
-        if(data.status === "error") {
-            console.error("Druckfehler über Python:", data.message);
-        }
-    })
-    .catch(error => {
-        console.warn("Drucker-Server offline oder nicht erreichbar. Ticket wird nur auf dem Screen angezeigt.", error);
-    });
+        fetch('http://127.0.0.1:5000/print-ticket', {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ticketDaten)
+        })
+        .then(response => response.json())
+        .then(data => { console.log("Drucker-Server Rückmeldung:", data); })
+        .catch(error => { console.warn("Drucker-Server offline.", error); });
+    }
 }
 
 function rendereNavigation(schritt) {
@@ -291,5 +330,28 @@ function rendereNavigation(schritt) {
     }
 }
 
-// Start-Trigger beim Laden der Seite
+// AUTOMATISCHER TIMEOUT (INAKTIVITÄTS-RESET NACH 10 SEKUNDEN)
+let inaktivitaetsTimer;
+const TIMEOUT_ZEIT = 10000;
+
+function starteInaktivitaetsTimer() {
+    clearTimeout(inaktivitaetsTimer);
+    inaktivitaetsTimer = setTimeout(() => {
+        if (buchung.nach !== "" || buchung.baNummer !== "" || buchung.gutscheinCode !== "") {
+            console.log("10s Inaktivität: Setze Automat lautlos zurück...");
+            buchung = {
+                von: "Magdeburg Hbf", nach: "", klasse: "2", rabatt: "kein",
+                baNummer: "", gutscheinCode: "", gutscheinRabatt: 0, echtDrucken: true
+            };
+            aktivesFeld = "nach";
+            zeigeSchritt1();
+        }
+    }, TIMEOUT_ZEIT);
+}
+
+function benutzerAktivitaet() { starteInaktivitaetsTimer(); }
+window.addEventListener('click', benutzerAktivitaet);
+window.addEventListener('touchstart', benutzerAktivitaet);
+
+// Start-Trigger
 ladeBahnhoefe();
