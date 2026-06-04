@@ -6,13 +6,13 @@ let buchung = {
     rabatt: "kein",
     baNummer: "",
     gutscheinCode: "",
-    gutscheinRabatt: 0, // Prozentualer Rabatt (z.B. 0.20 für 20%)
-    echtDrucken: true   // Steuert, ob der Pi-Drucker angesteuert wird
+    gutscheinRabatt: 0, 
+    echtDrucken: true   
 };
 
 // Hier speichern wir die Bahnhöfe aus der JSON-Datei
 let bahnhoefe = [];
-let aktivesFeld = "nach"; 
+let aktivesFeld = null; // Startet mit null -> Tastatur ist standardmäßig versteckt!
 
 // LIVE-LADEN DER BAHNHOEFE AUS DER JSON-DATEI
 async function ladeBahnhoefe() {
@@ -23,7 +23,8 @@ async function ladeBahnhoefe() {
         console.log(`${bahnhoefe.length} Bahnhöfe erfolgreich geladen.`);
     } catch (error) {
         console.error("Fehler beim Laden der Bahnhofsdaten:", error);
-        bahnhoefe = ["Magdeburg Hbf", "Zerbst/Anhalt", "Berlin Hbf"];
+        // Fallback falls Datei fehlt (wird sofort gefiltert)
+        bahnhoefe = ["Magdeburg Hbf", "Zerbst/Anhalt", "Magdeburg-Buckau", "Berlin Hbf", "Leipzig Hbf"];
     }
     zeigeSchritt1();
 }
@@ -37,7 +38,7 @@ function updateUhrzeit() {
 }
 setInterval(updateUhrzeit, 1000);
 
-// SCHRITT 1: Stationen wählen
+// SCHRITT 1: Stationen wählen (Tastatur öffnet sich erst bei Klick)
 function zeigeSchritt1() {
     const title = document.getElementById('menue-titel');
     if (title) title.textContent = "Start / Ziel wählen";
@@ -45,26 +46,53 @@ function zeigeSchritt1() {
     const display = document.getElementById('display');
     if (!display) return;
 
+    // Filter-Logik für die Vorschläge direkt vorbereiten
+    const suchText = (aktivesFeld === "von" ? buchung.von : buchung.nach).toUpperCase();
+    let vorschlaegeHtml = "";
+    
+    if (aktivesFeld && suchText.length >= 1) {
+        const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
+        if (treffer.length > 0) {
+            vorschlaegeHtml = `
+                <div class="such-label">Mögliche Stationen für "${suchText}":</div>
+                <div class="vorschlag-liste">
+                    ${treffer.slice(0, 5).map(t => `<div class="vorschlag-item" onclick="waehleVorschlag('${t}')">🚉 ${t}</div>`).join("")}
+                </div>
+            `;
+        } else {
+            vorschlaegeHtml = `<div class="such-label" style="color:#e74c3c;">Keine Bahnhöfe gefunden...</div>`;
+        }
+    }
+
     display.innerHTML = `
         <h3>Reiseverbindung eingeben</h3>
         
-        <label style="font-size:0.9rem; font-weight:bold;">Abfahrtsbahnhof:</label>
-        <div id="feld-von" class="input-box ${aktivesFeld==='von'?'active':''}" onclick="setzeAktivesFeld('von')">${buchung.von || 'Bitte tippen...'}</div>
-        
-        <label style="font-size:0.9rem; font-weight:bold;">Zielbahnhof:</label>
-        <div id="feld-nach" class="input-box ${aktivesFeld==='nach'?'active':''}" onclick="setzeAktivesFeld('nach')">${buchung.nach || 'Bitte tippen...'}</div>
-        
-        <div id="vorschläge" class="vorschlag-liste" style="display:none;"></div>
-        
-        <div class="tastatur">
-            ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => `<div class="key" onclick="tippeBuchstabe('${l}')">${l}</div>`).join("")}
-            <div class="key" onclick="tippeBuchstabe(' ')">LEER</div>
-            <div class="key" onclick="tippeBuchstabe('-')">-</div>
-            <div class="key" onclick="tippeBuchstabe('/')">/</div>
-            <div class="key wide" style="background:#e74c3c; color:white;" onclick="loescheBuchstabe()">⌫</div>
+        <label style="font-size:0.9rem; font-weight:bold; display:block; margin-bottom:4px;">Abfahrtsbahnhof:</label>
+        <div id="feld-von" class="input-box ${aktivesFeld==='von'?'active':''}" onclick="setzeAktivesFeld('von')">
+            ${buchung.von || '<span class="placeholder">Bitte tippen...</span>'}
         </div>
         
-        <button class="btn-weiter" onclick="pruefeSchritt1()">Weiter zur Ticket-Auswahl ➔</button>
+        <label style="font-size:0.9rem; font-weight:bold; display:block; margin-bottom:4px; margin-top:10px;">Zielbahnhof:</label>
+        <div id="feld-nach" class="input-box ${aktivesFeld==='nach'?'active':''}" onclick="setzeAktivesFeld('nach')">
+            ${buchung.nach || '<span class="placeholder">Ziel eingeben (z.B. Ze)...</span>'}
+        </div>
+        
+        <div id="suchErgebnisse">${vorschlaegeHtml}</div>
+        
+        ${aktivesFeld ? `
+            <div class="tastatur-container">
+                <div class="tastatur">
+                    ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(l => `<div class="key" onclick="tippeBuchstabe('${l}')">${l}</div>`).join("")}
+                    <div class="key" onclick="tippeBuchstabe(' ')">LEER</div>
+                    <div class="key" onclick="tippeBuchstabe('-')">-</div>
+                    <div class="key" onclick="tippeBuchstabe('/')">/</div>
+                    <div class="key wide" style="background:#e74c3c; color:white;" onclick="loescheBuchstabe()">⌫</div>
+                </div>
+                <button class="btn-schliessen" onclick="schliesseTastatur()">⌨ Tastatur verbergen</button>
+            </div>
+        ` : ''}
+        
+        <button class="btn-weiter" style="margin-top: 20px;" onclick="pruefeSchritt1()">Weiter zur Ticket-Auswahl ➔</button>
     `;
 
     rendereNavigation("start");
@@ -76,41 +104,31 @@ function setzeAktivesFeld(feld) {
     zeigeSchritt1();
 }
 
+function schliesseTastatur() {
+    aktivesFeld = null;
+    zeigeSchritt1();
+}
+
 function tippeBuchstabe(b) {
+    if(!aktivesFeld) return;
     if(aktivesFeld === "von") buchung.von += b;
     if(aktivesFeld === "nach") buchung.nach += b;
     zeigeSchritt1();
-    zeigeVorschlaege();
 }
 
 function loescheBuchstabe() {
+    if(!aktivesFeld) return;
     if(aktivesFeld === "von") buchung.von = buchung.von.slice(0, -1);
     if(aktivesFeld === "nach") buchung.nach = buchung.nach.slice(0, -1);
     zeigeSchritt1();
-    zeigeVorschlaege();
-}
-
-function zeigeVorschlaege() {
-    const suchText = (aktivesFeld === "von" ? buchung.von : buchung.nach).toUpperCase();
-    const vDiv = document.getElementById('vorschläge');
-    if(!vDiv) return;
-    
-    if(suchText.length < 1) { vDiv.style.display = "none"; return; }
-
-    const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
-    if(treffer.length > 0) {
-        vDiv.style.display = "block";
-        vDiv.innerHTML = treffer.slice(0, 5).map(t => `<div class="vorschlag-item" onclick="waehleVorschlag('${t}')">${t}</div>`).join(""); 
-    } else {
-        vDiv.style.display = "none";
-    }
 }
 
 function waehleVorschlag(bahnhof) {
     if(aktivesFeld === "von") buchung.von = bahnhof;
     if(aktivesFeld === "nach") buchung.nach = bahnhof;
-    const vDiv = document.getElementById('vorschläge');
-    if (vDiv) vDiv.style.display = "none";
+    
+    // Nach Auswahl: Tastatur automatisch einklappen für saubere Ansicht!
+    aktivesFeld = null; 
     zeigeSchritt1();
 }
 
@@ -164,14 +182,12 @@ function berechneUndZahle() {
     document.getElementById('menue-titel').textContent = "Zahlung & Optionen";
     const display = document.getElementById('display');
 
-    // Basispreis-Simulation
     let preis = Math.abs(buchung.nach.length - buchung.von.length) * 2.10 + 4.20;
     if(buchung.klasse === "1") preis *= 1.6; 
 
     if(buchung.rabatt === 'bundeswehr') preis = 0.00; 
     if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; 
 
-    // Rabattcode-Server Abfrage
     if (buchung.gutscheinRabatt > 0) {
         preis = preis * (1 - buchung.gutscheinRabatt);
     }
@@ -223,7 +239,6 @@ function loeseGutscheineInLine() {
     const code = document.getElementById('couponInput').value.trim().toUpperCase();
     const statusDiv = document.getElementById('couponStatus');
     
-    // Rabatt-Datenbank (Gutschein-Server)
     const rabattServer = {
         "PROZENT20": 0.20,
         "BAHN50": 0.50,
@@ -279,7 +294,6 @@ function druckeTicket(endPreis) {
     `;
     rendereNavigation("fertig");
 
-    // Nur an den Pi senden, wenn Hardware-Druck aktiv ist
     if (buchung.echtDrucken) {
         const ticketDaten = {
             von: buchung.von.trim(),
@@ -298,7 +312,7 @@ function druckeTicket(endPreis) {
             body: JSON.stringify(ticketDaten)
         })
         .then(response => response.json())
-        .then(data => { console.log("Drucker-Server Rückmeldung:", data); })
+        .then(data => { print("Drucker-Server OK:", data); })
         .catch(error => { console.warn("Drucker-Server offline.", error); });
     }
 }
@@ -316,7 +330,7 @@ function rendereNavigation(schritt) {
     } else if (schritt === "schritt2") {
         nav.innerHTML = `
             <button class="btn-nav cancel" onclick="location.reload()">❌ Abbruch</button>
-            <button class="btn-nav" onclick="zeigeSchritt1()">⬅ Zurück</button>
+            <button class="btn-nav" onclick="setzeAktivesFeld('nach')">⬅ Zurück</button>
         `;
     } else if (schritt === "zahlung") {
         nav.innerHTML = `
@@ -330,7 +344,7 @@ function rendereNavigation(schritt) {
     }
 }
 
-// AUTOMATISCHER TIMEOUT (INAKTIVITÄTS-RESET NACH 10 SEKUNDEN)
+// INAKTIVITÄTS-TIMEOUT (10 SEKUNDEN LAUTLOSER RESET)
 let inaktivitaetsTimer;
 const TIMEOUT_ZEIT = 10000;
 
@@ -338,12 +352,12 @@ function starteInaktivitaetsTimer() {
     clearTimeout(inaktivitaetsTimer);
     inaktivitaetsTimer = setTimeout(() => {
         if (buchung.nach !== "" || buchung.baNummer !== "" || buchung.gutscheinCode !== "") {
-            console.log("10s Inaktivität: Setze Automat lautlos zurück...");
+            console.log("Inaktivität erkannt: Reset zur Startseite.");
             buchung = {
                 von: "Magdeburg Hbf", nach: "", klasse: "2", rabatt: "kein",
                 baNummer: "", gutscheinCode: "", gutscheinRabatt: 0, echtDrucken: true
             };
-            aktivesFeld = "nach";
+            aktivesFeld = null; // Tastatur wieder zuklappen
             zeigeSchritt1();
         }
     }, TIMEOUT_ZEIT);
@@ -353,5 +367,4 @@ function benutzerAktivitaet() { starteInaktivitaetsTimer(); }
 window.addEventListener('click', benutzerAktivitaet);
 window.addEventListener('touchstart', benutzerAktivitaet);
 
-// Start-Trigger
 ladeBahnhoefe();
