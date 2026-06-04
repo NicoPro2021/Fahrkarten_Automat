@@ -30,17 +30,21 @@ async function ladeBahnhoefe() {
 
 function updateUhrzeit() {
     const uhrzeitElement = document.getElementById('uhrzeit');
-    const jetzt = new Date();
-    uhrzeitElement.textContent = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    if (uhrzeitElement) {
+        const jetzt = new Date();
+        uhrzeitElement.textContent = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    }
 }
 setInterval(updateUhrzeit, 1000);
-updateUhrzeit();
 
 // SCHRITT 1: Stationen wählen
 function zeigeSchritt1() {
-    document.getElementById('menue-titel').textContent = "Start / Ziel wählen";
-    const display = document.getElementById('display');
+    const title = document.getElementById('menue-titel');
+    if (title) title.textContent = "Start / Ziel wählen";
     
+    const display = document.getElementById('display');
+    if (!display) return;
+
     display.innerHTML = `
         <h3>Reiseverbindung eingeben</h3>
         
@@ -62,8 +66,9 @@ function zeigeSchritt1() {
         
         <button class="btn-weiter" onclick="pruefeSchritt1()">Weiter zur Ticket-Auswahl ➔</button>
     `;
-    
+
     rendereNavigation("start");
+    updateUhrzeit();
 }
 
 function setzeAktivesFeld(feld) {
@@ -88,8 +93,10 @@ function loescheBuchstabe() {
 function zeigeVorschlaege() {
     const suchText = (aktivesFeld === "von" ? buchung.von : buchung.nach).toUpperCase();
     const vDiv = document.getElementById('vorschläge');
-    if(suchText.length < 1) { vDiv.style.display = "none"; return; }
+    if(!vDiv) return;
     
+    if(suchText.length < 1) { vDiv.style.display = "none"; return; }
+
     const treffer = bahnhoefe.filter(b => b.toUpperCase().includes(suchText));
     if(treffer.length > 0) {
         vDiv.style.display = "block";
@@ -102,7 +109,8 @@ function zeigeVorschlaege() {
 function waehleVorschlag(bahnhof) {
     if(aktivesFeld === "von") buchung.von = bahnhof;
     if(aktivesFeld === "nach") buchung.nach = bahnhof;
-    document.getElementById('vorschläge').style.display = "none";
+    const vDiv = document.getElementById('vorschläge');
+    if (vDiv) vDiv.style.display = "none";
     zeigeSchritt1();
 }
 
@@ -118,7 +126,7 @@ function pruefeSchritt1() {
 function zeigeSchritt2() {
     document.getElementById('menue-titel').textContent = "Klasse & Rabatte wählen";
     const display = document.getElementById('display');
-    
+
     display.innerHTML = `
         <h3>Klasse & Sonderangebote</h3>
         
@@ -142,7 +150,7 @@ function zeigeSchritt2() {
         
         <button class="btn-weiter" onclick="berechneUndZahle()">Weiter zur Zahlung ➔</button>
     `;
-    
+
     rendereNavigation("schritt2");
 }
 
@@ -155,13 +163,16 @@ function berechneUndZahle() {
 
     document.getElementById('menue-titel').textContent = "Zahlung";
     const display = document.getElementById('display');
-    
+
     // Basispreis-Simulation
     let preis = Math.abs(buchung.nach.length - buchung.von.length) * 2.10 + 4.20;
     if(buchung.klasse === "1") preis *= 1.6; 
-    
+
     if(buchung.rabatt === 'bundeswehr') preis = 0.00; 
     if(buchung.rabatt === 'mitarbeiter') preis *= 0.10; 
+
+    // Wir runden hier direkt im JS auf zwei Nachkommastellen ab
+    const gerundeterPreis = parseFloat(preis.toFixed(2));
 
     display.innerHTML = `
         <h3>Zahlung</h3>
@@ -172,12 +183,12 @@ function berechneUndZahle() {
         </div>
         
         <p style="font-size: 1.6rem; color: var(--db-rot); font-weight: bold; text-align:center; margin: 15px 0;">
-            Gesamtpreis: ${preis.toFixed(2)} €
+            Gesamtpreis: ${gerundeterPreis.toFixed(2).replace('.', ',')} €
         </p>
         
         <div class="optionen-grid">
-            <button class="btn-weiter" style="background:#27ae60; margin:0;" onclick="druckeTicket(${preis})">💳 Karte</button>
-            <button class="btn-weiter" style="background:#2980b9; margin:0;" onclick="druckeTicket(${preis})">🪙 Bar</button>
+            <button class="btn-weiter" style="background:#27ae60; margin:0;" onclick="druckeTicket(${gerundeterPreis})">💳 Karte</button>
+            <button class="btn-weiter" style="background:#2980b9; margin:0;" onclick="druckeTicket(${gerundeterPreis})">🪙 Bar</button>
         </div>
     `;
     rendereNavigation("zahlung");
@@ -188,8 +199,10 @@ function druckeTicket(endPreis) {
     document.getElementById('menue-titel').textContent = "Ticket-Druck";
     const display = document.getElementById('display');
     const heute = new Date().toLocaleDateString('de-DE');
-    
-    // UI auf dem Bildschirm aktualisieren
+
+    // Wir erzeugen einen perfekt formatierten String für das UI und die Übertragung
+    const preisString = endPreis.toFixed(2).replace('.', ',');
+
     display.innerHTML = `
         <h3>Fahrkarte wird ausgegeben...</h3>
         <p style="font-weight: bold; color: #27ae60; text-align:center;">
@@ -208,7 +221,7 @@ function druckeTicket(endPreis) {
             <div>Klasse: ${buchung.klasse}. Klasse / 1 Erw.</div>
             <div>Tarif: ${buchung.rabatt.toUpperCase()}</div>
             ${buchung.baNummer ? `<div>Pers.-Nr (BA): ${buchung.baNummer}</div>` : ''}
-            <div>Preis: ${endPreis.toFixed(2)} EUR</div>
+            <div>Preis: ${preisString} EUR</div>
             <br>
             <div style="border-top:1px dashed #000; padding-top:5px; text-align:center; font-size:0.8rem;">
                 Gültig am: ${heute}<br>
@@ -218,18 +231,22 @@ function druckeTicket(endPreis) {
     `;
     rendereNavigation("fertig");
 
-    // HARDWARE-ANSTEUERUNG: Sende Daten an das lokale Python-Skript des Pi
+    // HARDWARE-ANSTEUERUNG: Sende Daten an den Flask-Server auf dem Pi
+    // Wir übergeben den Preis direkt als sauberen String, um Floating-Point-Fehler im Python zu kappen
     const ticketDaten = {
-        von: buchung.von,
-        nach: buchung.nach,
-        klasse: buchung.klasse,
+        von: buchung.von.trim(),
+        nach: buchung.nach.trim(),
+        klasse: buchung.klasse === "1" ? "1. Klasse" : "2. Klasse",
         rabatt: buchung.rabatt,
         baNummer: buchung.baNummer,
-        preis: endPreis
+        preis: preisString,  // Überträgt z.B. "29,40" statt 29.400000002
+        datum: "Sofortiger Fahrtantritt" // Das hat gefehlt!
     };
 
-    fetch('http://localhost:5000/print-ticket', {
+    // Geändert auf localhost:5000 (oder 127.0.0.1:5000) wie in deinem Chromium-Aufruf freigegeben
+    fetch('http://127.0.0.1:5000/print-ticket', {
         method: 'POST',
+        mode: 'cors',
         headers: {
             'Content-Type': 'application/json'
         },
@@ -249,6 +266,8 @@ function druckeTicket(endPreis) {
 
 function rendereNavigation(schritt) {
     const nav = document.getElementById('navigation');
+    if (!nav) return;
+    
     if (schritt === "start") {
         nav.innerHTML = `
             <button class="btn-nav" onclick="location.reload()">🏠 Start</button>
