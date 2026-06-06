@@ -26,7 +26,7 @@
         }
         .price-tag { color: #ffcc00; }
         .card-info { color: #00ffcc; }
-        .logout-btn { background: #555; padding: 6px 12px; font-size: 14px; border-radius: 4px; margin-left: 10px; }
+        .logout-btn { background: #555; padding: 6px 12px; font-size: 14px; border-radius: 4px; margin-left: 10px; border:none; color:white; cursor:pointer;}
         .logout-btn:hover { background: #b30015; }
 
         .controls {
@@ -118,6 +118,7 @@
         let aktiveCardUID = null;
         let isAdminOpen = false;
         let ausgewählteAdminKundenUID = null;
+        let blockNfcPolling = false; // Verhindert das Überschreiben während Transaktionen
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -168,8 +169,11 @@
         }
 
         async function druckeFahrplan() {
-            if (!aktiveCardUID) return;
+            if (!aktiveCardUID || blockNfcPolling) return;
+            blockNfcPolling = true; // Sperrt den automatischen Abruf sofort
+
             try {
+                // 1. Abbuchen auf dem Pi Server ausführen
                 const resAbbuchen = await fetch('http://127.0.0.1:5000/abbuchen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid: aktiveCardUID })
@@ -177,17 +181,29 @@
                 const datenAbbuchen = await resAbbuchen.json();
                 
                 if(datenAbbuchen.status === "success") {
+                    // Update den Kontostand sofort visuell auf der Seite
                     document.getElementById('guthabenDisplay').textContent = datenAbbuchen.guthaben.toFixed(2).replace('.', ',') + " €";
                     
+                    // 2. Druckauftrag starten
                     const select = document.getElementById('stationSelect');
                     await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ station: select.options[select.selectedIndex].text, abfahrten: aktuelleAbfahrten })
                     });
                     
-                    setTimeout(logoutCard, 2000);
-                } else { alert(datenAbbuchen.message); }
-            } catch (error) { alert("Transaktion fehlgeschlagen."); }
+                    // Karte nach 2 Sekunden abmelden
+                    setTimeout(() => {
+                        logoutCard();
+                        blockNfcPolling = false;
+                    }, 2000);
+                } else { 
+                    alert(datenAbbuchen.message); 
+                    blockNfcPolling = false;
+                }
+            } catch (error) { 
+                alert("Transaktion fehlgeschlagen."); 
+                blockNfcPolling = false;
+            }
         }
 
         function logoutCard() {
@@ -200,6 +216,8 @@
         }
 
         async function checkNFC() {
+            if (blockNfcPolling) return; // Überspringen, falls gerade gedruckt oder abgebucht wird
+
             try {
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
