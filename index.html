@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abfahrtstafel</title>
+    <style>
+        /* Basis-Design & Touch-Optimierung */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #e2001a;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Große Elemente für bequeme Touchscreen-Bedienung */
+        select, button {
+            padding: 15px 20px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+        button {
+            background-color: #e2001a;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #b30015;
+        }
+        
+        table {
+            width: 100%;
+            max-width: 1000px;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 18px; /* Gute Lesbarkeit auf Displays */
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+        .delay {
+            color: #e2001a;
+            font-weight: bold;
+        }
+
+        /* Druck-Layout: Speziell für Thermodrucker (80mm) */
+        @media print {
+            @page { margin: 0; }
+            body {
+                background: none;
+                padding: 10px;
+                width: 80mm; /* Bon-Breite */
+                font-size: 14px;
+                align-items: flex-start;
+            }
+            .controls {
+                display: none; /* Versteckt Buttons und Dropdown beim Drucken */
+            }
+            h1 {
+                font-size: 18px;
+                text-align: left;
+                margin-bottom: 10px;
+                color: black;
+            }
+            table {
+                box-shadow: none;
+                width: 100%;
+                font-size: 12px;
+            }
+            th, td {
+                padding: 4px 2px;
+                border-bottom: 1px dashed #000;
+            }
+            th {
+                background-color: transparent;
+                color: black;
+                border-bottom: 2px solid black;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="stationTitle">Abfahrtstafel</h1>
+    
+    <div class="controls">
+        <select id="stationSelect" onchange="ladeAbfahrten()"></select>
+        <button onclick="ladeAbfahrten()">Aktualisieren 🔄</button>
+        <button onclick="druckeFahrplan()">Drucken 🖨️</button>
+    </div>
+
+    <table id="abfahrtenTable">
+        <thead>
+            <tr>
+                <th>Zeit</th>
+                <th>Linie</th>
+                <th>Ziel</th>
+                <th>Gleis</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="4">Bitte Station wählen...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        // Die direkte URL zu deinen JSON-Daten auf GitHub
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/nicopro2021/Abfahrtstafel-/main/";
+
+        const LOCAL_STATIONS = [
+            { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
+            { name: "Biederitz", file: "biederitz.json" }, { name: "Bitterfeld", file: "bitterfeld.json" },
+            { name: "Brandenburg Hbf", file: "brandenburg_hbf.json" }, { name: "Dessau Hbf", file: "dessau_hbf.json" },
+            { name: "Dessau Süd", file: "dessau_sued.json" }, { name: "Gommern", file: "gommern.json" },
+            { name: "Güterglück", file: "gueterglueck.json" }, { name: "Leipzig Hbf", file: "leipzig_hbf.json" },
+            { name: "Leipzig Hbf (tief)", file: "leipzig_hbf_tief.json" }, { name: "Magdeburg Hbf", file: "magdeburg_hbf.json" },
+            { name: "Magdeburg Herrenkrug", file: "magdeburg_herrenkrug.json" }, { name: "Magdeburg Neustadt", file: "magdeburg_neustadt.json" },
+            { name: "Pretzier (Altm)", file: "pretzier_altm.json" }, { name: "Rodleben", file: "rodleben.json" },
+            { name: "Roßlau (Elbe)", file: "rosslau.json" }, { name: "Wolfen", file: "wolfen.json" },
+            { name: "Wusterwitz", file: "wusterwitz.json" }, { name: "Zerbst/Anhalt", file: "zerbst.json" }
+        ];
+
+        function initDropdown() {
+            const select = document.getElementById('stationSelect');
+            LOCAL_STATIONS.forEach(station => {
+                const option = document.createElement('option');
+                option.value = station.file;
+                option.textContent = station.name;
+                
+                // Zerbst/Anhalt als Standard vorauswählen
+                if (station.name === "Zerbst/Anhalt") {
+                    option.selected = true;
+                }
+                
+                select.appendChild(option);
+            });
+        }
+
+        async function ladeAbfahrten() {
+            const select = document.getElementById('stationSelect');
+            const selectedFile = select.value;
+            const selectedName = select.options[select.selectedIndex].text;
+            
+            document.getElementById('stationTitle').textContent = 'Abfahrten: ' + selectedName;
+            
+            const tbody = document.querySelector('#abfahrtenTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4">Daten werden geladen...</td></tr>';
+
+            try {
+                // Holt die JSON-Datei DIREKT vom anderen GitHub-Repository
+                const url = GITHUB_BASE_URL + selectedFile;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Netzwerkfehler beim Abrufen von GitHub');
+                
+                const data = await response.json();
+                tbody.innerHTML = '';
+
+                // Flexibler Fallback für die Datenstruktur
+                const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
+                
+                if (fahrten.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">Keine aktuellen Abfahrten gefunden.</td></tr>';
+                    return;
+                }
+
+                fahrten.forEach(zug => {
+                    const tr = document.createElement('tr');
+                    
+                    let zeitAnzeige = zug.zeit || zug.when || zug.plannedWhen || '-';
+                    let verspaetung = zug.verspaetung || zug.delay || null;
+                    
+                    if (verspaetung) {
+                        zeitAnzeige += ` <span class="delay">(+${verspaetung})</span>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td>${zeitAnzeige}</td>
+                        <td><strong>${zug.linie || zug.line?.name || '-'}</strong></td>
+                        <td>${zug.ziel || zug.direction || '-'}</td>
+                        <td>${zug.gleis || zug.platform || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error('Fehler:', error);
+                tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Fehler beim Laden der Daten von GitHub.</td></tr>';
+            }
+        }
+
+        function druckeFahrplan() {
+            window.print();
+        }
+
+        // Initialisierung
+        initDropdown();
+        ladeAbfahrten();
+        
+        // Refresh alle 60 Sekunden
+        setInterval(ladeAbfahrten, 60000);
+    </script>
+</body>
+</html>
