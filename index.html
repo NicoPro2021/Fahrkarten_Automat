@@ -5,114 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abfahrtstafel</title>
     <style>
-        /* =========================================
-           BILDSCHIRM-ANSICHT (Touch-Display)
-           ========================================= */
-        @media screen {
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f4f4f9;
-                color: #333;
-                margin: 0;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            h1 { color: #e2001a; text-align: center; }
-            .controls {
-                margin-bottom: 20px;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 15px;
-                justify-content: center;
-                align-items: center;
-            }
-            select, button {
-                padding: 15px 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: 1px solid #ccc;
-                outline: none;
-            }
-            button {
-                background-color: #e2001a;
-                color: white;
-                border: none;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            button:hover { background-color: #b30015; }
-            table {
-                width: 100%;
-                max-width: 1000px;
-                border-collapse: collapse;
-                background: white;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                font-size: 18px;
-            }
-            th, td {
-                padding: 15px;
-                text-align: left;
-                border-bottom: 1px solid #ddd;
-            }
-            th { background-color: #333; color: white; }
-            .delay { color: #e2001a; font-weight: bold; }
-            .info-text { font-size: 0.85em; color: #e2001a; }
-            #printFooter { display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
-        /* =========================================
-           THERMODRUCKER-ANSICHT (Bon-Drucker)
-           ========================================= */
-        @media print {
-            @page {
-                margin: 0;
-            }
-            body {
-                background: none;
-                padding: 0;
-                margin: 0;
-                width: 100%;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 12px;
-                color: black;
-            }
-            .controls { display: none !important; }
-            
-            h1 {
-                font-size: 16px;
-                text-align: center;
-                margin: 10px 0;
-                border-bottom: 2px dashed black;
-                padding-bottom: 5px;
-                color: black;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th, td {
-                text-align: left;
-                padding: 4px 2px;
-                border-bottom: 1px dashed black;
-                word-wrap: break-word;
-            }
-            th {
-                font-weight: bold;
-                border-bottom: 2px solid black;
-            }
-            .delay, .info-text { font-weight: bold; color: black; }
-            
-            #printFooter {
-                display: block;
-                text-align: center;
-                margin-top: 15px;
-                font-size: 10px;
-                border-top: 1px dashed black;
-                padding-top: 5px;
-            }
+        h1 { color: #e2001a; text-align: center; }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
         }
+        select, button {
+            padding: 15px 20px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+        button {
+            background-color: #e2001a;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #b30015; }
+        table {
+            width: 100%;
+            max-width: 1000px;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 18px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th { background-color: #333; color: white; }
+        .delay { color: #e2001a; font-weight: bold; }
+        .info-text { font-size: 0.85em; color: #e2001a; }
     </style>
 </head>
 <body>
@@ -139,13 +81,9 @@
         </tbody>
     </table>
 
-    <div id="printFooter">
-        Gute Reise! <br>
-        <span id="printTime"></span>
-    </div>
-
     <script>
         const GITHUB_BASE_URL = "https://raw.githubusercontent.com/nicopro2021/Abfahrtstafel-/main/";
+        let aktuelleAbfahrten = [];
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -194,6 +132,7 @@
                 tbody.innerHTML = '';
 
                 const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
+                aktuelleAbfahrten = fahrten; 
                 
                 if (fahrten.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4">Keine aktuellen Abfahrten gefunden.</td></tr>';
@@ -203,13 +142,11 @@
                 fahrten.forEach(zug => {
                     const tr = document.createElement('tr');
                     
-                    // 1. Zeit-Logik: Planzeit vs Echte Zeit
                     let zeitAnzeige = zug.zeit || '-';
                     if (zug.echte_zeit && zug.echte_zeit !== zug.zeit) {
                         zeitAnzeige += ` <br><span class="delay">(heute ${zug.echte_zeit})</span>`;
                     }
 
-                    // 2. Info & Begründung
                     let zusatzInfo = "";
                     if (zug.info && zug.info.toLowerCase() !== "pünktlich") {
                         zusatzInfo = `<br><span class="info-text">⚠ ${zug.info}`;
@@ -234,17 +171,39 @@
             }
         }
 
-        function druckeFahrplan() {
-            const jetzt = new Date();
-            document.getElementById('printTime').textContent = "Stand: " + jetzt.toLocaleString('de-DE');
-            window.print();
+        async function druckeFahrplan() {
+            const select = document.getElementById('stationSelect');
+            const stationName = select.options[select.selectedIndex].text;
+
+            const daten = {
+                station: stationName,
+                abfahrten: aktuelleAbfahrten
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/print-abfahrten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(daten)
+                });
+
+                const result = await response.json();
+                
+                if(result.status === "success") {
+                    console.log("Erfolgreich an Drucker gesendet!");
+                } else {
+                    alert("Drucker-Fehler: " + result.message);
+                }
+            } catch (error) {
+                console.error('Fehler beim Drucken:', error);
+                alert("Server auf Port 5000 nicht erreichbar. Läuft der Pi-Server?");
+            }
         }
 
-        // Initialisierung
         initDropdown();
         ladeAbfahrten();
-        
-        // Refresh alle 60 Sekunden
         setInterval(ladeAbfahrten, 60000);
     </script>
 </body>
