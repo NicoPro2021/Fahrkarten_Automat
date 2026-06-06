@@ -19,13 +19,15 @@
         
         .kiosk-bar {
             width: 100%; max-width: 1000px;
-            display: flex; justify-content: space-between;
-            background: #333; color: white; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #333; color: white; padding: 12px 20px;
             border-radius: 8px; margin-bottom: 15px;
             box-sizing: border-box; font-size: 18px; font-weight: bold;
         }
         .price-tag { color: #ffcc00; }
         .card-info { color: #00ffcc; }
+        .logout-btn { background: #555; padding: 6px 12px; font-size: 14px; border-radius: 4px; margin-left: 10px; }
+        .logout-btn:hover { background: #b30015; }
 
         .controls {
             margin-bottom: 20px; display: flex; flex-wrap: wrap;
@@ -51,7 +53,8 @@
         .admin-box h2 { color: #e2001a; margin-top: 0; }
         .admin-box input { padding: 10px; font-size: 18px; width: 70%; margin: 10px 0; text-align: center; border-radius: 5px; border: none; }
         .admin-btn { width: 100%; margin: 8px 0; padding: 12px; font-size: 16px; }
-        .btn-sys { background-color: #555; }
+        .btn-sys { background-color: #444; color: #fff; }
+        .btn-sys:hover { background-color: #555; }
         .btn-close { background-color: #333; margin-top: 15px; }
         .sub-box { background: #111; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #444; }
     </style>
@@ -59,7 +62,9 @@
 <body>
 
     <div class="kiosk-bar">
-        <div>Karte: <span id="cardDisplay" class="card-info">Keine Karte</span></div>
+        <div>Karte: <span id="cardDisplay" class="card-info">Keine Karte</span>
+             <button id="logoutBtn" class="logout-btn" onclick="logoutCard()" style="display:none;">Abmelden ❌</button>
+        </div>
         <div>Guthaben: <span id="guthabenDisplay">0,00 €</span></div>
         <div>Druckpreis: <span id="preisDisplay" class="price-tag">0,50 €</span></div>
     </div>
@@ -95,10 +100,13 @@
                     <input type="number" id="inputAufladen" placeholder="0.00" step="0.50"><br>
                     <button class="admin-btn" style="background:#00b386;" onclick="sendeAufladung()">Guthaben aufladen</button>
                 </div>
+                <button class="admin-btn btn-sys" style="margin-top:10px; font-size:14px;" onclick="starteAdminLernen()">🔄 Neue Admin-Karte einlernen</button>
             </div>
             
+            <h3 style="color:#e2001a; margin-top:20px;">🖥️ System-Steuerung</h3>
             <button class="admin-btn btn-sys" onclick="systemAktion('reboot')">🔄 System Neustarten</button>
-            <button class="admin-btn btn-sys" style="background:#b30015;" onclick="systemAktion('shutdown')">🛑 Herunterfahren</button>
+            <button class="admin-btn" style="background:#b30015;" onclick="systemAktion('shutdown')">🛑 Herunterfahren</button>
+            
             <button class="admin-btn btn-close" onclick="schließeAdminMenü()">Schließen</button>
         </div>
     </div>
@@ -177,7 +185,7 @@
                         body: JSON.stringify({ station: select.options[select.selectedIndex].text, abfahrten: aktuelleAbfahrten })
                     });
                     
-                    setTimeout(logoutCard, 3000);
+                    setTimeout(logoutCard, 2000);
                 } else { alert(datenAbbuchen.message); }
             } catch (error) { alert("Transaktion fehlgeschlagen."); }
         }
@@ -186,17 +194,16 @@
             aktiveCardUID = null;
             document.getElementById('cardDisplay').textContent = "Keine Karte";
             document.getElementById('guthabenDisplay').textContent = "0,00 €";
+            document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('printBtn').disabled = true;
             document.getElementById('printBtn').textContent = "Bitte Karte auflegen 🖨️";
         }
 
-        // --- DIAGNOSE NFC LOGIK ---
         async function checkNFC() {
             try {
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
                 
-                // Verbindung steht: Überschrift rot
                 document.getElementById('stationTitle').style.color = "#e2001a";
                 document.getElementById('stationTitle').textContent = "Abfahrtstafel";
 
@@ -210,6 +217,10 @@
                     document.getElementById('inputPreis').value = aktuellerDruckpreis;
                     document.getElementById('adminOverlay').style.display = 'flex';
                 } 
+                else if (data.status === "admin_learned") {
+                    alert("Erfolgreich! Neue Admin-Karte registriert. Schließe Menü.");
+                    schließeAdminMenü();
+                }
                 else if (data.status === "user_card") {
                     if (isAdminOpen) {
                         ausgewählteAdminKundenUID = data.uid;
@@ -219,6 +230,7 @@
                         aktiveCardUID = data.uid;
                         document.getElementById('cardDisplay').textContent = data.card_name;
                         document.getElementById('guthabenDisplay').textContent = data.guthaben.toFixed(2).replace('.', ',') + " €";
+                        document.getElementById('logoutBtn').style.display = 'inline-block';
                         
                         const printBtn = document.getElementById('printBtn');
                         if (data.guthaben >= aktuellerDruckpreis) {
@@ -229,9 +241,15 @@
                     }
                 }
             } catch (e) { 
-                // DIAGNOSE: Verbindung blockiert: Überschrift BLAU
                 document.getElementById('stationTitle').style.color = "blue"; 
                 document.getElementById('stationTitle').textContent = "Abfahrtstafel (Server offline/blockiert)";
+            }
+        }
+
+        async function starteAdminLernen() {
+            if(confirm("Möchtest du die nächste Karte, die aufgelegt wird, als neue Master-Admin-Karte speichern?")) {
+                document.getElementById('adminCardStatus').innerHTML = "⏳ <b>Warte auf neue Admin-Karte... Jetzt auflegen!</b>";
+                await fetch('http://127.0.0.1:5000/set-admin-mode', { method: 'POST' });
             }
         }
 
@@ -269,7 +287,8 @@
         }
 
         async function systemAktion(typ) {
-            if(confirm("Aktion ausführen?")) {
+            const msg = typ === "shutdown" ? "System wirklich HERUNTERFAHREN?" : "System wirklich NEUSTARTEN?";
+            if(confirm(msg)) {
                 try { await fetch('http://127.0.0.1:5000/system-control', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: typ })
                 }); } catch(e) {}
