@@ -43,20 +43,52 @@
         th { background-color: #e2001a; color: white; }
         .delay { color: #e2001a; font-weight: bold; }
         .info-text { font-size: 0.85em; color: #e2001a; }
+        
+        .print-chkbx { width: 25px; height: 25px; cursor: pointer; }
 
         /* ADMIN OVERLAY */
         .admin-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; color: white;
         }
-        .admin-box { background: #222; padding: 30px; border-radius: 12px; border: 2px solid #e2001a; text-align: center; max-width: 450px; width: 90%; }
+        .admin-box { background: #222; padding: 25px; border-radius: 12px; border: 2px solid #e2001a; text-align: center; max-width: 450px; width: 90%; max-height: 95vh; overflow-y: auto; }
         .admin-box h2 { color: #e2001a; margin-top: 0; }
-        .admin-box input { padding: 10px; font-size: 18px; width: 70%; margin: 10px 0; text-align: center; border-radius: 5px; border: none; }
+        .admin-box input { padding: 12px; font-size: 20px; width: 80%; margin: 10px 0; text-align: center; border-radius: 5px; border: none; background: #fff; color: #000; }
         .admin-btn { width: 100%; margin: 8px 0; padding: 12px; font-size: 16px; }
         .btn-sys { background-color: #444; color: #fff; }
         .btn-sys:hover { background-color: #555; }
         .btn-close { background-color: #333; margin-top: 15px; }
         .sub-box { background: #111; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #444; }
+
+        /* =========================================
+           VIRTUELLE TASTATUR (NUMPAD) STYLES
+           ========================================= */
+        .numpad-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 280px;
+            margin: 15px auto 0 auto;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .numpad-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            text-align: center;
+        }
+        .numpad-btn:active { background: #e2001a; }
+        .numpad-btn.btn-action { background: #555; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        .numpad-btn.btn-action:active { background: #b30015; }
     </style>
 </head>
 <body>
@@ -79,9 +111,15 @@
 
     <table id="abfahrtenTable">
         <thead>
-            <tr><th>Zeit</th><th>Linie</th><th>Ziel</th><th>Gl.</th></tr>
+            <tr>
+                <th style="width: 50px; text-align: center;">Druck</th>
+                <th>Zeit</th>
+                <th>Linie</th>
+                <th>Ziel</th>
+                <th>Gl.</th>
+            </tr>
         </thead>
-        <tbody><tr><td colspan="4">Bitte Station wählen...</td></tr></tbody>
+        <tbody><tr><td colspan="5">Bitte Station wählen...</td></tr></tbody>
     </table>
 
     <div id="adminOverlay" class="admin-overlay">
@@ -90,8 +128,24 @@
             <hr style="border-color:#e2001a;">
             
             <p>Automaten-Druckpreis ändern (€):</p>
-            <input type="number" id="inputPreis" step="0.05" min="0.00">
-            <button class="admin-btn" onclick="speichereNeuenPreis()">Preis Speichern</button>
+            <input type="text" id="inputPreis" readonly placeholder="0.00">
+            
+            <div class="numpad-container">
+                <button class="numpad-btn" onclick="nfcInput('1')">1</button>
+                <button class="numpad-btn" onclick="nfcInput('2')">2</button>
+                <button class="numpad-btn" onclick="nfcInput('3')">3</button>
+                <button class="numpad-btn" onclick="nfcInput('4')">4</button>
+                <button class="numpad-btn" onclick="nfcInput('5')">5</button>
+                <button class="numpad-btn" onclick="nfcInput('6')">6</button>
+                <button class="numpad-btn" onclick="nfcInput('7')">7</button>
+                <button class="numpad-btn" onclick="nfcInput('8')">8</button>
+                <button class="numpad-btn" onclick="nfcInput('9')">9</button>
+                <button class="numpad-btn" onclick="nfcInput('.')">.</button>
+                <button class="numpad-btn" onclick="nfcInput('0')">0</button>
+                <button class="numpad-btn btn-action" onclick="nfcInput('clear')">⌫</button>
+            </div>
+            
+            <button class="admin-btn" style="background-color: #e2001a; margin-top:15px;" onclick="speichereNeuenPreis()">Preis Speichern</button>
             
             <div class="sub-box">
                 <h3>💳 Karten-Aufladestation</h3>
@@ -103,7 +157,7 @@
                 <button class="admin-btn btn-sys" style="margin-top:10px; font-size:14px;" onclick="starteAdminLernen()">🔄 Neue Admin-Karte einlernen</button>
             </div>
             
-            <h3 style="color:#e2001a; margin-top:20px;">🖥️ System-Steuerung</h3>
+            <h3 style="color:#e2001a; margin-top:15px;">🖥️ System-Steuerung</h3>
             <button class="admin-btn btn-sys" onclick="systemAktion('reboot')">🔄 System Neustarten</button>
             <button class="admin-btn" style="background:#b30015;" onclick="systemAktion('shutdown')">🛑 Herunterfahren</button>
             
@@ -118,7 +172,7 @@
         let aktiveCardUID = null;
         let isAdminOpen = false;
         let ausgewählteAdminKundenUID = null;
-        let blockNfcPolling = false; // Verhindert das Überschreiben während Transaktionen
+        let blockNfcPolling = false;
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -146,15 +200,16 @@
         async function ladeAbfahrten() {
             const select = document.getElementById('stationSelect');
             const tbody = document.querySelector('#abfahrtenTable tbody');
-            tbody.innerHTML = '<tr><td colspan="4">Daten werden geladen...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">Daten werden geladen...</td></tr>';
             try {
                 const response = await fetch(GITHUB_BASE_URL + select.value);
                 const data = await response.json();
                 tbody.innerHTML = '';
                 const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
                 aktuelleAbfahrten = fahrten; 
-                if (fahrten.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Keine aktuellen Abfahrten.</td></tr>'; return; }
-                fahrten.forEach(zug => {
+                if (fahrten.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Keine aktuellen Abfahrten.</td></tr>'; return; }
+                
+                fahrten.forEach((zug, index) => {
                     const tr = document.createElement('tr');
                     let zAnzeige = zug.zeit || '-';
                     if (zug.echte_zeit && zug.echte_zeit !== zug.zeit) zAnzeige += ` <br><span class="delay">(heute ${zug.echte_zeit})</span>`;
@@ -162,18 +217,38 @@
                     if (zug.info && zug.info.toLowerCase() !== "pünktlich") {
                         zInfo = `<br><span class="info-text">⚠ ${zug.info}${zug.begruendung ? ' - ' + zug.begruendung : ''}</span>`;
                     }
-                    tr.innerHTML = `<td>${zAnzeige}</td><td><strong>${zug.linie || '-'}</strong></td><td>${zug.ziel || '-'}${zInfo}</td><td>${zug.gleis || '-'}</td>`;
+                    tr.innerHTML = `
+                        <td style="text-align: center;"><input type="checkbox" class="print-chkbx" data-index="${index}"></td>
+                        <td>${zAnzeige}</td>
+                        <td><strong>${zug.linie || '-'}</strong></td>
+                        <td>${zug.ziel || '-'}${zInfo}</td>
+                        <td>${zug.gleis || '-'}</td>
+                    `;
                     tbody.appendChild(tr);
                 });
-            } catch (error) { tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Fehler beim Laden von GitHub.</td></tr>'; }
+            } catch (error) { tbody.innerHTML = '<tr><td colspan="5" style="color:red;">Fehler beim Laden von GitHub.</td></tr>'; }
         }
 
         async function druckeFahrplan() {
             if (!aktiveCardUID || blockNfcPolling) return;
-            blockNfcPolling = true; // Sperrt den automatischen Abruf sofort
+            
+            const checkboxen = document.querySelectorAll('.print-chkbx');
+            let gewaehlteZuege = [];
+            
+            checkboxen.forEach(box => {
+                if (box.checked) {
+                    const idx = parseInt(box.getAttribute('data-index'));
+                    gewaehlteZuege.push(aktuelleAbfahrten[idx]);
+                }
+            });
+
+            if (gewaehlteZuege.length === 0) {
+                gewaehlteZuege = aktuelleAbfahrten;
+            }
+
+            blockNfcPolling = true;
 
             try {
-                // 1. Abbuchen auf dem Pi Server ausführen
                 const resAbbuchen = await fetch('http://127.0.0.1:5000/abbuchen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid: aktiveCardUID })
@@ -181,17 +256,18 @@
                 const datenAbbuchen = await resAbbuchen.json();
                 
                 if(datenAbbuchen.status === "success") {
-                    // Update den Kontostand sofort visuell auf der Seite
                     document.getElementById('guthabenDisplay').textContent = datenAbbuchen.guthaben.toFixed(2).replace('.', ',') + " €";
                     
-                    // 2. Druckauftrag starten
                     const select = document.getElementById('stationSelect');
                     await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ station: select.options[select.selectedIndex].text, abfahrten: aktuelleAbfahrten })
+                        body: JSON.stringify({ 
+                            station: select.options[select.selectedIndex].text, 
+                            abfahrten: gewaehlteZuege,
+                            wurde_gefiltert: (gewaehlteZuege.length !== aktuelleAbfahrten.length)
+                        })
                     });
                     
-                    // Karte nach 2 Sekunden abmelden
                     setTimeout(() => {
                         logoutCard();
                         blockNfcPolling = false;
@@ -216,7 +292,7 @@
         }
 
         async function checkNFC() {
-            if (blockNfcPolling) return; // Überspringen, falls gerade gedruckt oder abgebucht wird
+            if (blockNfcPolling) return;
 
             try {
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
@@ -232,7 +308,7 @@
 
                 if (data.status === "admin_hold") {
                     isAdminOpen = true;
-                    document.getElementById('inputPreis').value = aktuellerDruckpreis;
+                    document.getElementById('inputPreis').value = aktuellerDruckpreis.toFixed(2);
                     document.getElementById('adminOverlay').style.display = 'flex';
                 } 
                 else if (data.status === "admin_learned") {
@@ -264,6 +340,31 @@
             }
         }
 
+        /* =========================================
+           LOGIK FÜR DIE VIRTUELLE TASTATUR
+           ========================================= */
+        function nfcInput(wert) {
+            const inputField = document.getElementById('inputPreis');
+            let aktuellerWert = inputField.value;
+
+            if (wert === 'clear') {
+                // Letztes Zeichen löschen
+                inputField.value = aktuellerWert.slice(0, -1);
+            } else if (wert === '.') {
+                // Punkt nur erlauben, wenn noch keiner da ist
+                if (!aktuellerWert.includes('.')) {
+                    inputField.value += wert;
+                }
+            } else {
+                // Nach dem Punkt maximal zwei Nachkommastellen erlauben
+                if (aktuellerWert.includes('.')) {
+                    const teile = aktuellerWert.split('.');
+                    if (teile[1].length >= 2) return; 
+                }
+                inputField.value += wert;
+            }
+        }
+
         async function starteAdminLernen() {
             if(confirm("Möchtest du die nächste Karte, die aufgelegt wird, als neue Master-Admin-Karte speichern?")) {
                 document.getElementById('adminCardStatus').innerHTML = "⏳ <b>Warte auf neue Admin-Karte... Jetzt auflegen!</b>";
@@ -292,40 +393,4 @@
             } catch (e) { alert("Fehler beim Aufladen."); }
         }
 
-        async function speichereNeuenPreis() {
-            const neuerPreis = parseFloat(document.getElementById('inputPreis').value);
-            try {
-                const response = await fetch('http://127.0.0.1:5000/set-preis', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preis: neuerPreis })
-                });
-                const res = await response.json();
-                if(res.status === "success") { schließeAdminMenü(); }
-            } catch (e) { alert("Fehler beim Speichern des Preises."); }
-        }
-
-        async function systemAktion(typ) {
-            const msg = typ === "shutdown" ? "System wirklich HERUNTERFAHREN?" : "System wirklich NEUSTARTEN?";
-            if(confirm(msg)) {
-                try { await fetch('http://127.0.0.1:5000/system-control', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: typ })
-                }); } catch(e) {}
-            }
-        }
-
-        function schließeAdminMenü() { 
-            isAdminOpen = false;
-            ausgewählteAdminKundenUID = null;
-            document.getElementById('chargeControls').style.display = 'none';
-            document.getElementById('adminCardStatus').textContent = "Bitte Kundenkarte auf den Leser legen...";
-            document.getElementById('adminOverlay').style.display = 'none'; 
-            logoutCard();
-        }
-
-        initDropdown();
-        ladeAbfahrten();
-        setInterval(ladeAbfahrten, 60000);
-        setInterval(checkNFC, 1500);
-    </script>
-</body>
-</html>
+        async function speichereNeuen
