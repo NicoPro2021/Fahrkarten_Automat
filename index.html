@@ -15,7 +15,7 @@
             flex-direction: column;
             align-items: center;
         }
-        h1 { color: #e2001a; text-align: center; margin-bottom: 5px; }
+        h1 { color: #e2001a; text-align: center; margin-bottom: 5px; transition: color 0.3s; }
         
         .kiosk-bar {
             width: 100%; max-width: 1000px;
@@ -162,8 +162,7 @@
         async function druckeFahrplan() {
             if (!aktiveCardUID) return;
             try {
-                // 1. Geld abbuchen vom Pi Server
-                const resAbbuchen = await fetch('http://localhost:5000/abbuchen', {
+                const resAbbuchen = await fetch('http://127.0.0.1:5000/abbuchen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid: aktiveCardUID })
                 });
@@ -172,14 +171,12 @@
                 if(datenAbbuchen.status === "success") {
                     document.getElementById('guthabenDisplay').textContent = datenAbbuchen.guthaben.toFixed(2).replace('.', ',') + " €";
                     
-                    // 2. Druckauftrag starten
                     const select = document.getElementById('stationSelect');
-                    await fetch('http://localhost:5000/print-abfahrten', {
+                    await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ station: select.options[select.selectedIndex].text, abfahrten: aktuelleAbfahrten })
                     });
                     
-                    // Nach dem Drucken die Kartensitzung schließen
                     setTimeout(logoutCard, 3000);
                 } else { alert(datenAbbuchen.message); }
             } catch (error) { alert("Transaktion fehlgeschlagen."); }
@@ -193,12 +190,16 @@
             document.getElementById('printBtn').textContent = "Bitte Karte auflegen 🖨️";
         }
 
-        // --- CORE NFC LOGIK ---
+        // --- DIAGNOSE NFC LOGIK ---
         async function checkNFC() {
             try {
-                const response = await fetch('http://localhost:5000/get-nfc');
+                const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
                 
+                // Verbindung steht: Überschrift rot
+                document.getElementById('stationTitle').style.color = "#e2001a";
+                document.getElementById('stationTitle').textContent = "Abfahrtstafel";
+
                 if (data.preis) {
                     aktuellerDruckpreis = data.preis;
                     document.getElementById('preisDisplay').textContent = aktuellerDruckpreis.toFixed(2).replace('.', ',') + " €";
@@ -211,12 +212,10 @@
                 } 
                 else if (data.status === "user_card") {
                     if (isAdminOpen) {
-                        // Wenn Admin-Menü offen -> Setze Karte in den Auflademodus
                         ausgewählteAdminKundenUID = data.uid;
                         document.getElementById('adminCardStatus').innerHTML = `Gewählt: <b>${data.card_name}</b><br>Guthaben: ${data.guthaben.toFixed(2)} €`;
                         document.getElementById('chargeControls').style.display = 'block';
                     } else {
-                        // Normaler Kiosk-Modus -> Karte einloggen
                         aktiveCardUID = data.uid;
                         document.getElementById('cardDisplay').textContent = data.card_name;
                         document.getElementById('guthabenDisplay').textContent = data.guthaben.toFixed(2).replace('.', ',') + " €";
@@ -229,7 +228,11 @@
                         }
                     }
                 }
-            } catch (e) { console.log("NFC-Polling offline"); }
+            } catch (e) { 
+                // DIAGNOSE: Verbindung blockiert: Überschrift BLAU
+                document.getElementById('stationTitle').style.color = "blue"; 
+                document.getElementById('stationTitle').textContent = "Abfahrtstafel (Server offline/blockiert)";
+            }
         }
 
         async function sendeAufladung() {
@@ -238,7 +241,7 @@
             if (isNaN(betrag) || betrag <= 0) return;
 
             try {
-                const response = await fetch('http://localhost:5000/aufladen', {
+                const response = await fetch('http://127.0.0.1:5000/aufladen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid: ausgewählteAdminKundenUID, betrag: betrag })
                 });
@@ -256,7 +259,7 @@
         async function speichereNeuenPreis() {
             const neuerPreis = parseFloat(document.getElementById('inputPreis').value);
             try {
-                const response = await fetch('http://localhost:5000/set-preis', {
+                const response = await fetch('http://127.0.0.1:5000/set-preis', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ preis: neuerPreis })
                 });
@@ -267,7 +270,7 @@
 
         async function systemAktion(typ) {
             if(confirm("Aktion ausführen?")) {
-                try { await fetch('http://localhost:5000/system-control', {
+                try { await fetch('http://127.0.0.1:5000/system-control', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: typ })
                 }); } catch(e) {}
             }
