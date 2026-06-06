@@ -60,31 +60,15 @@
         .btn-close { background-color: #333; margin-top: 15px; }
         .sub-box { background: #111; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #444; }
 
-        /* =========================================
-           VIRTUELLE TASTATUR (NUMPAD) STYLES
-           ========================================= */
+        /* NUMPAD */
         .numpad-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            max-width: 280px;
-            margin: 15px auto 0 auto;
-            background: #1a1a1a;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #444;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            max-width: 280px; margin: 15px auto 0 auto; background: #1a1a1a;
+            padding: 10px; border-radius: 8px; border: 1px solid #444;
         }
         .numpad-btn {
-            background: #333;
-            color: white;
-            border: none;
-            padding: 15px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            user-select: none;
-            text-align: center;
+            background: #333; color: white; border: none; padding: 15px;
+            font-size: 20px; font-weight: bold; border-radius: 6px; cursor: pointer;
         }
         .numpad-btn:active { background: #e2001a; }
         .numpad-btn.btn-action { background: #555; font-size: 16px; display: flex; align-items: center; justify-content: center; }
@@ -340,23 +324,17 @@
             }
         }
 
-        /* =========================================
-           LOGIK FÜR DIE VIRTUELLE TASTATUR
-           ========================================= */
         function nfcInput(wert) {
             const inputField = document.getElementById('inputPreis');
             let aktuellerWert = inputField.value;
 
             if (wert === 'clear') {
-                // Letztes Zeichen löschen
                 inputField.value = aktuellerWert.slice(0, -1);
             } else if (wert === '.') {
-                // Punkt nur erlauben, wenn noch keiner da ist
                 if (!aktuellerWert.includes('.')) {
                     inputField.value += wert;
                 }
             } else {
-                // Nach dem Punkt maximal zwei Nachkommastellen erlauben
                 if (aktuellerWert.includes('.')) {
                     const teile = aktuellerWert.split('.');
                     if (teile[1].length >= 2) return; 
@@ -393,4 +371,17 @@
             } catch (e) { alert("Fehler beim Aufladen."); }
         }
 
-        async function speichereNeuen
+        async function speichereNeuenPreis() {
+            const neuerPreis = parseFloat(document.getElementById('inputPreis').value);
+            if (isNaN(neuerPreis)) {
+                alert("Bitte einen gültigen Preis eingeben.");
+                return;
+            }
+            try {
+                const response = await fetch('http://127.0.0.1:5000/set-preis', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preis: neuerPreis })
+                });
+                const res = await response.json();
+                if(res.status === "success") { schließeAdminMenü(); }
+            } catch (e) { alert("Fehler beim Sp
