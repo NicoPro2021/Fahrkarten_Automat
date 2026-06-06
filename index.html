@@ -5,103 +5,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abfahrtstafel</title>
     <style>
-        /* Basis-Design & Touch-Optimierung */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        h1 {
-            color: #e2001a;
-            text-align: center;
-        }
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            align-items: center;
-        }
-        /* Große Elemente für bequeme Touchscreen-Bedienung */
-        select, button {
-            padding: 15px 20px;
-            font-size: 18px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            outline: none;
-        }
-        button {
-            background-color: #e2001a;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-weight: bold;
-        }
-        button:hover {
-            background-color: #b30015;
-        }
-        
-        table {
-            width: 100%;
-            max-width: 1000px;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            font-size: 18px; /* Gute Lesbarkeit auf Displays */
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #333;
-            color: white;
-        }
-        .delay {
-            color: #e2001a;
-            font-weight: bold;
+        /* =========================================
+           BILDSCHIRM-ANSICHT (Touch-Display)
+           ========================================= */
+        @media screen {
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f9;
+                color: #333;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            h1 { color: #e2001a; text-align: center; }
+            .controls {
+                margin-bottom: 20px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                justify-content: center;
+                align-items: center;
+            }
+            select, button {
+                padding: 15px 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: 1px solid #ccc;
+                outline: none;
+            }
+            button {
+                background-color: #e2001a;
+                color: white;
+                border: none;
+                cursor: pointer;
+                font-weight: bold;
+            }
+            button:hover { background-color: #b30015; }
+            table {
+                width: 100%;
+                max-width: 1000px;
+                border-collapse: collapse;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                font-size: 18px;
+            }
+            th, td {
+                padding: 15px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            th { background-color: #333; color: white; }
+            .delay { color: #e2001a; font-weight: bold; }
+            #printFooter { display: none; } /* Fußzeile auf Monitor verstecken */
         }
 
-        /* Druck-Layout: Speziell für Thermodrucker (80mm) */
+        /* =========================================
+           THERMODRUCKER-ANSICHT (Bon-Drucker)
+           ========================================= */
         @media print {
-            @page { margin: 0; }
+            @page {
+                margin: 0; /* Entfernt die leeren weißen Ränder vom Browser */
+            }
             body {
                 background: none;
-                padding: 10px;
-                width: 80mm; /* Bon-Breite */
-                font-size: 14px;
-                align-items: flex-start;
+                padding: 0;
+                margin: 0;
+                width: 100%; /* Passt auf 58mm oder 80mm Rollen */
+                font-family: 'Courier New', Courier, monospace; /* Typischer Bon-Look */
+                font-size: 12px; /* Gut lesbar auf schmalem Papier */
+                color: black;
             }
-            .controls {
-                display: none; /* Versteckt Buttons und Dropdown beim Drucken */
-            }
+            .controls { display: none !important; } /* Versteckt Buttons auf dem Papier */
+            
             h1 {
-                font-size: 18px;
-                text-align: left;
-                margin-bottom: 10px;
+                font-size: 16px;
+                text-align: center;
+                margin: 10px 0;
+                border-bottom: 2px dashed black;
+                padding-bottom: 5px;
                 color: black;
             }
             table {
-                box-shadow: none;
                 width: 100%;
-                font-size: 12px;
+                border-collapse: collapse;
             }
             th, td {
+                text-align: left;
                 padding: 4px 2px;
-                border-bottom: 1px dashed #000;
+                border-bottom: 1px dashed black;
+                word-wrap: break-word;
             }
             th {
-                background-color: transparent;
-                color: black;
+                font-weight: bold;
                 border-bottom: 2px solid black;
+            }
+            .delay { font-weight: bold; } /* Kein Rot beim Drucken, nur Fett */
+            
+            #printFooter {
+                display: block;
+                text-align: center;
+                margin-top: 15px;
+                font-size: 10px;
+                border-top: 1px dashed black;
+                padding-top: 5px;
             }
         }
     </style>
@@ -113,7 +121,7 @@
     <div class="controls">
         <select id="stationSelect" onchange="ladeAbfahrten()"></select>
         <button onclick="ladeAbfahrten()">Aktualisieren 🔄</button>
-        <button onclick="druckeFahrplan()">Drucken 🖨️</button>
+        <button onclick="druckeFahrplan()">Fahrplan Drucken 🖨️</button>
     </div>
 
     <table id="abfahrtenTable">
@@ -122,7 +130,7 @@
                 <th>Zeit</th>
                 <th>Linie</th>
                 <th>Ziel</th>
-                <th>Gleis</th>
+                <th>Gl.</th>
             </tr>
         </thead>
         <tbody>
@@ -130,8 +138,12 @@
         </tbody>
     </table>
 
+    <div id="printFooter">
+        Gute Reise! <br>
+        <span id="printTime"></span>
+    </div>
+
     <script>
-        // Die direkte URL zu deinen JSON-Daten auf GitHub
         const GITHUB_BASE_URL = "https://raw.githubusercontent.com/nicopro2021/Abfahrtstafel-/main/";
 
         const LOCAL_STATIONS = [
@@ -154,7 +166,6 @@
                 option.value = station.file;
                 option.textContent = station.name;
                 
-                // Zerbst/Anhalt als Standard vorauswählen
                 if (station.name === "Zerbst/Anhalt") {
                     option.selected = true;
                 }
@@ -174,15 +185,13 @@
             tbody.innerHTML = '<tr><td colspan="4">Daten werden geladen...</td></tr>';
 
             try {
-                // Holt die JSON-Datei DIREKT vom anderen GitHub-Repository
                 const url = GITHUB_BASE_URL + selectedFile;
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('Netzwerkfehler beim Abrufen von GitHub');
+                if (!response.ok) throw new Error('Netzwerkfehler');
                 
                 const data = await response.json();
                 tbody.innerHTML = '';
 
-                // Flexibler Fallback für die Datenstruktur
                 const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
                 
                 if (fahrten.length === 0) {
@@ -216,14 +225,15 @@
         }
 
         function druckeFahrplan() {
+            // Aktuelles Datum und Uhrzeit auf den Bon stempeln
+            const jetzt = new Date();
+            document.getElementById('printTime').textContent = "Stand: " + jetzt.toLocaleString('de-DE');
+            
             window.print();
         }
 
-        // Initialisierung
         initDropdown();
         ladeAbfahrten();
-        
-        // Refresh alle 60 Sekunden
         setInterval(ladeAbfahrten, 60000);
     </script>
 </body>
