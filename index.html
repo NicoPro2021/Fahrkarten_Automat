@@ -58,7 +58,8 @@
             }
             th { background-color: #333; color: white; }
             .delay { color: #e2001a; font-weight: bold; }
-            #printFooter { display: none; } /* Fußzeile auf Monitor verstecken */
+            .info-text { font-size: 0.85em; color: #e2001a; }
+            #printFooter { display: none; }
         }
 
         /* =========================================
@@ -66,18 +67,18 @@
            ========================================= */
         @media print {
             @page {
-                margin: 0; /* Entfernt die leeren weißen Ränder vom Browser */
+                margin: 0;
             }
             body {
                 background: none;
                 padding: 0;
                 margin: 0;
-                width: 100%; /* Passt auf 58mm oder 80mm Rollen */
-                font-family: 'Courier New', Courier, monospace; /* Typischer Bon-Look */
-                font-size: 12px; /* Gut lesbar auf schmalem Papier */
+                width: 100%;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 12px;
                 color: black;
             }
-            .controls { display: none !important; } /* Versteckt Buttons auf dem Papier */
+            .controls { display: none !important; }
             
             h1 {
                 font-size: 16px;
@@ -101,7 +102,7 @@
                 font-weight: bold;
                 border-bottom: 2px solid black;
             }
-            .delay { font-weight: bold; } /* Kein Rot beim Drucken, nur Fett */
+            .delay, .info-text { font-weight: bold; color: black; }
             
             #printFooter {
                 display: block;
@@ -202,18 +203,27 @@
                 fahrten.forEach(zug => {
                     const tr = document.createElement('tr');
                     
-                    let zeitAnzeige = zug.zeit || zug.when || zug.plannedWhen || '-';
-                    let verspaetung = zug.verspaetung || zug.delay || null;
-                    
-                    if (verspaetung) {
-                        zeitAnzeige += ` <span class="delay">(+${verspaetung})</span>`;
+                    // 1. Zeit-Logik: Planzeit vs Echte Zeit
+                    let zeitAnzeige = zug.zeit || '-';
+                    if (zug.echte_zeit && zug.echte_zeit !== zug.zeit) {
+                        zeitAnzeige += ` <br><span class="delay">(heute ${zug.echte_zeit})</span>`;
+                    }
+
+                    // 2. Info & Begründung
+                    let zusatzInfo = "";
+                    if (zug.info && zug.info.toLowerCase() !== "pünktlich") {
+                        zusatzInfo = `<br><span class="info-text">⚠ ${zug.info}`;
+                        if (zug.begruendung) {
+                            zusatzInfo += ` - ${zug.begruendung}`;
+                        }
+                        zusatzInfo += `</span>`;
                     }
 
                     tr.innerHTML = `
                         <td>${zeitAnzeige}</td>
-                        <td><strong>${zug.linie || zug.line?.name || '-'}</strong></td>
-                        <td>${zug.ziel || zug.direction || '-'}</td>
-                        <td>${zug.gleis || zug.platform || '-'}</td>
+                        <td><strong>${zug.linie || '-'}</strong></td>
+                        <td>${zug.ziel || '-'}${zusatzInfo}</td>
+                        <td>${zug.gleis || '-'}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -225,15 +235,16 @@
         }
 
         function druckeFahrplan() {
-            // Aktuelles Datum und Uhrzeit auf den Bon stempeln
             const jetzt = new Date();
             document.getElementById('printTime').textContent = "Stand: " + jetzt.toLocaleString('de-DE');
-            
             window.print();
         }
 
+        // Initialisierung
         initDropdown();
         ladeAbfahrten();
+        
+        // Refresh alle 60 Sekunden
         setInterval(ladeAbfahrten, 60000);
     </script>
 </body>
