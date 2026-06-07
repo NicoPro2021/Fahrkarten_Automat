@@ -188,11 +188,10 @@
         
         // --- SCREENSAVER LOGIK ---
         let idleTimeout;
-        const IDLE_TIME = 120000; // 120 Sekunden (2 Minuten) Inaktivität bis Video startet
+        const IDLE_TIME = 120000; // 120 Sekunden Inaktivität bis Video startet
 
         function resetIdleTimer() {
             clearTimeout(idleTimeout);
-            // Timer neu starten, wenn das Admin-Menü NICHT offen ist
             if (!isAdminOpen) {
                 idleTimeout = setTimeout(showStartScreen, IDLE_TIME);
             }
@@ -203,7 +202,7 @@
             const video = document.getElementById('bgVideo');
             if (screen.style.display !== 'none') {
                 screen.style.display = 'none';
-                video.pause(); // CPU entlasten
+                video.pause();
             }
             resetIdleTimer();
         }
@@ -212,15 +211,14 @@
             if (!isAdminOpen) {
                 document.getElementById('startScreen').style.display = 'flex';
                 document.getElementById('bgVideo').play().catch(e => console.log("Autoplay blockiert"));
-                logoutCard(); // Wenn der Screen kommt, wird aus Sicherheitsgründen abgemeldet
+                logoutCard(); // Wenn der Screen kommt, wird automatisch abgemeldet
             }
         }
 
-        // Lauscher für Berührungen auf dem Bildschirm (setzt den Timer zurück & versteckt Video)
+        // Interaktion auf dem Bildschirm setzt Timer zurück
         document.addEventListener('click', () => { hideStartScreen(); resetIdleTimer(); });
         document.addEventListener('touchstart', () => { hideStartScreen(); resetIdleTimer(); });
         document.addEventListener('mousemove', resetIdleTimer);
-
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -314,7 +312,7 @@
                     setTimeout(() => {
                         logoutCard();
                         blockNfcPolling = false;
-                        resetIdleTimer(); // Zurücksetzen nach erfolgreichem Druck
+                        resetIdleTimer(); 
                     }, 2000);
                 } else { 
                     alert(datenAbbuchen.message); 
@@ -350,7 +348,6 @@
                     document.getElementById('preisDisplay').textContent = aktuellerDruckpreis.toFixed(2).replace('.', ',') + " €";
                 }
 
-                // WENN EIN NFC-EVENT KOMMT, WACHT DER BILDSCHIRM SOFORT AUF
                 if (data.status !== "none") {
                     hideStartScreen();
                     resetIdleTimer();
@@ -380,4 +377,10 @@
                         if (data.guthaben >= aktuellerDruckpreis) {
                             printBtn.disabled = false; printBtn.textContent = "Fahrplan Drucken 🖨️";
                         } else {
-                            printBtn.disabled = true; printBtn.textContent = "Guthaben z
+                            printBtn.disabled = true; printBtn.textContent = "Guthaben zu gering!";
+                        }
+                    }
+                }
+            } catch (e) { 
+                document.getElementById('stationTitle').style.color = "blue"; 
+                document.getElementById('stationTitle').textContent = "Abfahrtsta
