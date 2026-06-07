@@ -46,27 +46,6 @@
         
         .print-chkbx { width: 25px; height: 25px; cursor: pointer; }
 
-        /* =========================================
-           STARTBILDSCHIRM (SCREENSAVER)
-           ========================================= */
-        #startScreen {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; z-index: 100000; /* Ganz vorne */
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; text-align: center;
-        }
-        #bgVideo {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; opacity: 0.6; /* Video leicht abdunkeln */
-            z-index: 1; pointer-events: none;
-        }
-        .start-text-container {
-            position: relative; z-index: 2; color: white;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
-        }
-        .start-title { font-size: 60px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-        .start-subtitle { font-size: 30px; font-weight: normal; background: #e2001a; padding: 10px 25px; border-radius: 8px; display: inline-block; }
-
         /* ADMIN OVERLAY */
         .admin-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -81,29 +60,38 @@
         .btn-close { background-color: #333; margin-top: 15px; }
         .sub-box { background: #111; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #444; }
 
-        /* NUMPAD */
+        /* =========================================
+           VIRTUELLE TASTATUR (NUMPAD) STYLES
+           ========================================= */
         .numpad-container {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-            max-width: 280px; margin: 15px auto 0 auto; background: #1a1a1a;
-            padding: 10px; border-radius: 8px; border: 1px solid #444;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 280px;
+            margin: 15px auto 0 auto;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
         }
-        .numpad-btn { background: #333; color: white; border: none; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .numpad-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            text-align: center;
+        }
         .numpad-btn:active { background: #e2001a; }
         .numpad-btn.btn-action { background: #555; font-size: 16px; display: flex; align-items: center; justify-content: center; }
         .numpad-btn.btn-action:active { background: #b30015; }
     </style>
 </head>
 <body>
-
-    <div id="startScreen" onclick="hideStartScreen()">
-        <video id="bgVideo" autoplay loop muted playsinline>
-            <source src="video.mp4" type="video/mp4">
-        </video>
-        <div class="start-text-container">
-            <div class="start-title">DB Fahrkarten-Simulator</div>
-            <div class="start-subtitle">👈 Bitte Bildschirm berühren oder Karte auflegen 👉</div>
-        </div>
-    </div>
 
     <div class="kiosk-bar">
         <div>Karte: <span id="cardDisplay" class="card-info">Keine Karte</span>
@@ -185,40 +173,6 @@
         let isAdminOpen = false;
         let ausgewählteAdminKundenUID = null;
         let blockNfcPolling = false;
-        
-        // --- SCREENSAVER LOGIK ---
-        let idleTimeout;
-        const IDLE_TIME = 120000; // 120 Sekunden Inaktivität bis Video startet
-
-        function resetIdleTimer() {
-            clearTimeout(idleTimeout);
-            if (!isAdminOpen) {
-                idleTimeout = setTimeout(showStartScreen, IDLE_TIME);
-            }
-        }
-
-        function hideStartScreen() {
-            const screen = document.getElementById('startScreen');
-            const video = document.getElementById('bgVideo');
-            if (screen.style.display !== 'none') {
-                screen.style.display = 'none';
-                video.pause();
-            }
-            resetIdleTimer();
-        }
-
-        function showStartScreen() {
-            if (!isAdminOpen) {
-                document.getElementById('startScreen').style.display = 'flex';
-                document.getElementById('bgVideo').play().catch(e => console.log("Autoplay blockiert"));
-                logoutCard(); // Wenn der Screen kommt, wird automatisch abgemeldet
-            }
-        }
-
-        // Interaktion auf dem Bildschirm setzt Timer zurück
-        document.addEventListener('click', () => { hideStartScreen(); resetIdleTimer(); });
-        document.addEventListener('touchstart', () => { hideStartScreen(); resetIdleTimer(); });
-        document.addEventListener('mousemove', resetIdleTimer);
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -277,15 +231,20 @@
 
         async function druckeFahrplan() {
             if (!aktiveCardUID || blockNfcPolling) return;
-            resetIdleTimer();
             
             const checkboxen = document.querySelectorAll('.print-chkbx');
             let gewaehlteZuege = [];
+            
             checkboxen.forEach(box => {
-                if (box.checked) { gewaehlteZuege.push(aktuelleAbfahrten[parseInt(box.getAttribute('data-index'))]); }
+                if (box.checked) {
+                    const idx = parseInt(box.getAttribute('data-index'));
+                    gewaehlteZuege.push(aktuelleAbfahrten[idx]);
+                }
             });
 
-            if (gewaehlteZuege.length === 0) { gewaehlteZuege = aktuelleAbfahrten; }
+            if (gewaehlteZuege.length === 0) {
+                gewaehlteZuege = aktuelleAbfahrten;
+            }
 
             blockNfcPolling = true;
 
@@ -312,7 +271,6 @@
                     setTimeout(() => {
                         logoutCard();
                         blockNfcPolling = false;
-                        resetIdleTimer(); 
                     }, 2000);
                 } else { 
                     alert(datenAbbuchen.message); 
@@ -348,11 +306,6 @@
                     document.getElementById('preisDisplay').textContent = aktuellerDruckpreis.toFixed(2).replace('.', ',') + " €";
                 }
 
-                if (data.status !== "none") {
-                    hideStartScreen();
-                    resetIdleTimer();
-                }
-
                 if (data.status === "admin_hold") {
                     isAdminOpen = true;
                     document.getElementById('inputPreis').value = aktuellerDruckpreis.toFixed(2);
@@ -383,4 +336,61 @@
                 }
             } catch (e) { 
                 document.getElementById('stationTitle').style.color = "blue"; 
-                document.getElementById('stationTitle').textContent = "Abfahrtsta
+                document.getElementById('stationTitle').textContent = "Abfahrtstafel (Server offline/blockiert)";
+            }
+        }
+
+        /* =========================================
+           LOGIK FÜR DIE VIRTUELLE TASTATUR
+           ========================================= */
+        function nfcInput(wert) {
+            const inputField = document.getElementById('inputPreis');
+            let aktuellerWert = inputField.value;
+
+            if (wert === 'clear') {
+                // Letztes Zeichen löschen
+                inputField.value = aktuellerWert.slice(0, -1);
+            } else if (wert === '.') {
+                // Punkt nur erlauben, wenn noch keiner da ist
+                if (!aktuellerWert.includes('.')) {
+                    inputField.value += wert;
+                }
+            } else {
+                // Nach dem Punkt maximal zwei Nachkommastellen erlauben
+                if (aktuellerWert.includes('.')) {
+                    const teile = aktuellerWert.split('.');
+                    if (teile[1].length >= 2) return; 
+                }
+                inputField.value += wert;
+            }
+        }
+
+        async function starteAdminLernen() {
+            if(confirm("Möchtest du die nächste Karte, die aufgelegt wird, als neue Master-Admin-Karte speichern?")) {
+                document.getElementById('adminCardStatus').innerHTML = "⏳ <b>Warte auf neue Admin-Karte... Jetzt auflegen!</b>";
+                await fetch('http://127.0.0.1:5000/set-admin-mode', { method: 'POST' });
+            }
+        }
+
+        async function sendeAufladung() {
+            if (!ausgewählteAdminKundenUID) return;
+            const betrag = parseFloat(document.getElementById('inputAufladen').value);
+            if (isNaN(betrag) || betrag <= 0) return;
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/aufladen', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: ausgewählteAdminKundenUID, betrag: betrag })
+                });
+                const res = await response.json();
+                if(res.status === "success") {
+                    alert("Erfolgreich aufgeladen!");
+                    document.getElementById('inputAufladen').value = "";
+                    document.getElementById('adminCardStatus').textContent = "Bitte Kundenkarte auf den Leser legen...";
+                    document.getElementById('chargeControls').style.display = 'none';
+                    ausgewählteAdminKundenUID = null;
+                }
+            } catch (e) { alert("Fehler beim Aufladen."); }
+        }
+
+        async function speichereNeuen
