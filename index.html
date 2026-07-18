@@ -14,9 +14,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            /* Verhindert Textmarkierung auf dem Touchscreen */
+            user-select: none; 
         }
         h1 { color: #e2001a; text-align: center; margin-bottom: 5px; transition: color 0.3s; }
-        
+
         .kiosk-bar {
             width: 100%; max-width: 1000px;
             display: flex; justify-content: space-between; align-items: center;
@@ -70,9 +72,26 @@
         .numpad-btn:active { background: #e2001a; }
         .numpad-btn.btn-action { background: #555; font-size: 16px; }
         .numpad-btn.btn-action:active { background: #b30015; }
+
+        /* WERBUNG OVERLAY (Screensaver) */
+        #ad-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10000; background: #000;
+        }
+        #ad-screen img, #ad-screen video {
+            width: 100%; height: 100%; object-fit: cover; position: absolute;
+            top: 0; left: 0; display: none;
+        }
+        .active-media { display: block !important; }
     </style>
 </head>
 <body>
+
+    <!-- Werbe-Modus (Screensaver) -->
+    <div id="ad-screen">
+        <img id="ad-image" src="" alt="Werbung">
+        <video id="ad-video" src="" muted autoplay playsinline loop></video>
+    </div>
 
     <div class="kiosk-bar">
         <div>Karte: <span id="cardDisplay" class="card-info">Keine Karte</span>
@@ -83,7 +102,7 @@
     </div>
 
     <h1 id="stationTitle">Abfahrtstafel</h1>
-    
+
     <div class="controls">
         <select id="stationSelect" onchange="ladeAbfahrten()"></select>
         <button onclick="ladeAbfahrten()">Aktualisieren 🔄</button>
@@ -101,11 +120,11 @@
         <div class="admin-box">
             <h2>SYSTEM ADMIN MENÜ</h2>
             <hr style="border-color:#e2001a;">
-            
+
             <p>Automaten-Druckpreis ändern (€):</p>
             <input type="text" id="inputPreis" readonly placeholder="0.00" onclick="setActiveInput('inputPreis')">
             <button class="admin-btn" onclick="speichereNeuenPreis()">Preis Speichern</button>
-            
+
             <div class="sub-box">
                 <h3>💳 Karten-Aufladestation</h3>
                 <p id="adminCardStatus">Bitte Kundenkarte auf den Leser legen...</p>
@@ -130,11 +149,11 @@
                 <button class="numpad-btn" onclick="numpadInput('0')">0</button>
                 <button class="numpad-btn btn-action" onclick="numpadInput('clear')">⌫</button>
             </div>
-            
+
             <h3 style="color:#e2001a; margin-top:20px;">🖥️ System-Steuerung</h3>
             <button class="admin-btn btn-sys" onclick="systemAktion('reboot')">🔄 System Neustarten</button>
             <button class="admin-btn" style="background:#b30015;" onclick="systemAktion('shutdown')">🛑 Herunterfahren</button>
-            
+
             <button class="admin-btn btn-close" onclick="schließeAdminMenü()">Schließen</button>
         </div>
     </div>
@@ -162,6 +181,77 @@
             { name: "Wusterwitz", file: "wusterwitz.json" }, { name: "Zerbst/Anhalt", file: "zerbst.json" }
         ];
 
+        // --- WERBEMODUS (Screensaver) LOGIK ---
+        const idleTimeLimit = 30000;  // 30 Sekunden Inaktivität
+        const adIntervalTime = 8000;  // 8 Sekunden pro Bild
+        let idleTimeout;
+        let adInterval;
+        let currentAdIndex = 0;
+        let isAdModeActive = false;
+
+        // Hier trägst du später deine GitHub-URLs ein
+        let adMedia = [
+            { type: "image", url: "https://via.placeholder.com/1920x1080/333333/ffffff?text=Werbung+1" },
+            { type: "image", url: "https://via.placeholder.com/1920x1080/e2001a/ffffff?text=Werbung+2" }
+        ];
+
+        const adScreen = document.getElementById('ad-screen');
+        const adImage = document.getElementById('ad-image');
+        const adVideo = document.getElementById('ad-video');
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimeout);
+            
+            if (isAdModeActive) {
+                hideAdvertising();
+            }
+            
+            // Timer nur neu starten, wenn das Admin-Menü geschlossen ist
+            if (!isAdminOpen) {
+                idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
+            }
+        }
+
+        function showAdvertising() {
+            if (isAdminOpen) return; // Verhindert, dass Werbung startet, während man im Admin-Menü ist
+            
+            isAdModeActive = true;
+            adScreen.style.display = 'block';
+            playNextAd(); 
+            adInterval = setInterval(playNextAd, adIntervalTime);
+        }
+
+        function hideAdvertising() {
+            isAdModeActive = false;
+            adScreen.style.display = 'none';
+            clearInterval(adInterval);
+            adVideo.pause();
+        }
+
+        function playNextAd() {
+            if (adMedia.length === 0) return;
+            const currentMedia = adMedia[currentAdIndex];
+
+            if (currentMedia.type === "image") {
+                adVideo.classList.remove('active-media');
+                adVideo.pause();
+                adImage.src = currentMedia.url;
+                adImage.classList.add('active-media');
+            } else if (currentMedia.type === "video") {
+                adImage.classList.remove('active-media');
+                adVideo.src = currentMedia.url;
+                adVideo.classList.add('active-media');
+                adVideo.play();
+            }
+
+            currentAdIndex++;
+            if (currentAdIndex >= adMedia.length) {
+                currentAdIndex = 0;
+            }
+        }
+
+        // --- ENDE WERBEMODUS LOGIK ---
+
         function initDropdown() {
             const select = document.getElementById('stationSelect');
             LOCAL_STATIONS.forEach(station => {
@@ -172,7 +262,6 @@
             });
         }
 
-        // Begrenzung der Checkboxen auf maximal 6
         function handleCheckboxChange(cb) {
             const checkedBoxes = document.querySelectorAll('.print-chkbx:checked');
             if (checkedBoxes.length > 6) {
@@ -192,7 +281,7 @@
                 const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
                 aktuelleAbfahrten = fahrten; 
                 if (fahrten.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Keine aktuellen Abfahrten.</td></tr>'; return; }
-                
+
                 fahrten.forEach((zug, index) => {
                     const tr = document.createElement('tr');
                     let zAnzeige = zug.zeit || '-';
@@ -212,17 +301,16 @@
 
         async function druckeFahrplan() {
             if (!aktiveCardUID || blockNfcPolling) return;
-            
+
             const checkboxen = document.querySelectorAll('.print-chkbx');
             let gewaehlteZuege = [];
-            
+
             checkboxen.forEach(box => {
                 if (box.checked) {
                     gewaehlteZuege.push(aktuelleAbfahrten[parseInt(box.getAttribute('data-index'))]);
                 }
             });
 
-            // Fallback: Wenn nichts ausgewählt wurde, drucke die ersten 6 Verbindungen
             if (gewaehlteZuege.length === 0) {
                 gewaehlteZuege = aktuelleAbfahrten.slice(0, 6);
             }
@@ -235,10 +323,10 @@
                     body: JSON.stringify({ uid: aktiveCardUID })
                 });
                 const datenAbbuchen = await resAbbuchen.json();
-                
+
                 if(datenAbbuchen.status === "success") {
                     document.getElementById('guthabenDisplay').textContent = datenAbbuchen.guthaben.toFixed(2).replace('.', ',') + " €";
-                    
+
                     const select = document.getElementById('stationSelect');
                     await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -248,11 +336,11 @@
                             wurde_gefiltert: (gewaehlteZuege.length !== aktuelleAbfahrten.length)
                         })
                     });
-                    
+
                     setTimeout(() => {
                         logoutCard();
                         blockNfcPolling = false;
-                        ladeAbfahrten(); // Setzt die Checkboxen zurück
+                        ladeAbfahrten(); 
                     }, 2000);
                 } else { 
                     alert(datenAbbuchen.message); 
@@ -273,7 +361,6 @@
             document.getElementById('printBtn').textContent = "Bitte Karte auflegen 🖨️";
         }
 
-        // Steuerung der aktiven Eingabefelder für das Numpad
         function setActiveInput(inputId) {
             if (currentActiveInputId) {
                 document.getElementById(currentActiveInputId).classList.remove('active-input');
@@ -287,6 +374,8 @@
             const inputField = document.getElementById(currentActiveInputId);
             let aktuellerWert = inputField.value;
 
+            resetIdleTimer(); // Tippen auf dem Numpad setzt den Timer ebenfalls zurück
+
             if (wert === 'clear') {
                 inputField.value = aktuellerWert.slice(0, -1);
             } else if (wert === '.') {
@@ -296,7 +385,7 @@
             } else {
                 if (aktuellerWert.includes('.')) {
                     const teile = aktuellerWert.split('.');
-                    if (teile[1].length >= 2) return; // Maximal 2 Nachkommastellen
+                    if (teile[1].length >= 2) return; 
                 }
                 inputField.value += wert;
             }
@@ -308,7 +397,7 @@
             try {
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
-                
+
                 document.getElementById('stationTitle').style.color = "#e2001a";
                 document.getElementById('stationTitle').textContent = "Abfahrtstafel";
 
@@ -317,11 +406,16 @@
                     document.getElementById('preisDisplay').textContent = aktuellerDruckpreis.toFixed(2).replace('.', ',') + " €";
                 }
 
+                // Wenn IRGENDEINE Karte aufgelegt wird, sofort die Werbung beenden!
+                if (data.status === "admin_hold" || data.status === "user_card" || data.status === "admin_learned") {
+                    resetIdleTimer();
+                }
+
                 if (data.status === "admin_hold") {
                     isAdminOpen = true;
                     document.getElementById('inputPreis').value = aktuellerDruckpreis.toFixed(2);
                     document.getElementById('adminOverlay').style.display = 'flex';
-                    setActiveInput('inputPreis'); // Preis-Feld standardmäßig für Tastatur aktivieren
+                    setActiveInput('inputPreis'); 
                 } 
                 else if (data.status === "admin_learned") {
                     alert("Erfolgreich! Neue Admin-Karte registriert. Schließe Menü.");
@@ -333,13 +427,13 @@
                         document.getElementById('adminCardStatus').innerHTML = `Gewählt: <b>${data.card_name}</b><br>Guthaben: ${data.guthaben.toFixed(2)} €`;
                         document.getElementById('chargeControls').style.display = 'block';
                         document.getElementById('inputAufladen').value = "";
-                        setActiveInput('inputAufladen'); // Fokus automatisch auf das Aufladen-Feld setzen
+                        setActiveInput('inputAufladen'); 
                     } else {
                         aktiveCardUID = data.uid;
                         document.getElementById('cardDisplay').textContent = data.card_name;
                         document.getElementById('guthabenDisplay').textContent = data.guthaben.toFixed(2).replace('.', ',') + " €";
                         document.getElementById('logoutBtn').style.display = 'inline-block';
-                        
+
                         const printBtn = document.getElementById('printBtn');
                         if (data.guthaben >= aktuellerDruckpreis) {
                             printBtn.disabled = false; printBtn.textContent = "Fahrplan Drucken 🖨️";
@@ -378,7 +472,7 @@
                     document.getElementById('adminCardStatus').textContent = "Bitte Kundenkarte auf den Leser legen...";
                     document.getElementById('chargeControls').style.display = 'none';
                     ausgewählteAdminKundenUID = null;
-                    setActiveInput('inputPreis'); // Fokus zurück auf Preis setzen
+                    setActiveInput('inputPreis'); 
                 }
             } catch (e) { alert("Fehler beim Aufladen."); }
         }
@@ -412,7 +506,7 @@
             isAdminOpen = false;
             ausgewählteAdminKundenUID = null;
             currentActiveInputId = null;
-            
+
             const inputs = document.querySelectorAll('.admin-box input');
             inputs.forEach(input => input.classList.remove('active-input'));
 
@@ -420,12 +514,24 @@
             document.getElementById('adminCardStatus').textContent = "Bitte Kundenkarte auf den Leser legen...";
             document.getElementById('adminOverlay').style.display = 'none'; 
             logoutCard();
+            
+            resetIdleTimer(); // Timer nach dem Schließen des Admin-Menüs wieder starten
         }
 
+        // Event Listener für Touch und Klicks auf dem gesamten Bildschirm (weckt das System)
+        window.addEventListener('click', resetIdleTimer);
+        window.addEventListener('touchstart', resetIdleTimer);
+        window.addEventListener('mousemove', resetIdleTimer);
+
+        // Initialisierung
         initDropdown();
         ladeAbfahrten();
+        resetIdleTimer(); // Timer beim ersten Start aktivieren
+
+        // Background-Loops
         setInterval(ladeAbfahrten, 60000);
         setInterval(checkNFC, 1500);
     </script>
 </body>
 </html>
+         
