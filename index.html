@@ -14,7 +14,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* Verhindert Textmarkierung auf dem Touchscreen */
             user-select: none; 
         }
         h1 { color: #e2001a; text-align: center; margin-bottom: 5px; transition: color 0.3s; }
@@ -181,23 +180,39 @@
             { name: "Wusterwitz", file: "wusterwitz.json" }, { name: "Zerbst/Anhalt", file: "zerbst.json" }
         ];
 
-        // --- WERBEMODUS (Screensaver) LOGIK ---
+        // --- WERBEMODUS (Screensaver) LOGIK mit GitHub JSON ---
         const idleTimeLimit = 30000;  // 30 Sekunden Inaktivität
-        const adIntervalTime = 8000;  // 8 Sekunden pro Bild
+        let adIntervalTime = 8000;    // Standard: 8 Sekunden pro Bild (kann von ads.json überschrieben werden)
+        
         let idleTimeout;
         let adInterval;
         let currentAdIndex = 0;
         let isAdModeActive = false;
-
-        // Hier trägst du später deine GitHub-URLs ein
-        let adMedia = [
-            { type: "image", url: "https://via.placeholder.com/1920x1080/333333/ffffff?text=Werbung+1" },
-            { type: "image", url: "https://via.placeholder.com/1920x1080/e2001a/ffffff?text=Werbung+2" }
-        ];
+        let adMedia = []; // Wird nun dynamisch befüllt
 
         const adScreen = document.getElementById('ad-screen');
         const adImage = document.getElementById('ad-image');
         const adVideo = document.getElementById('ad-video');
+
+        // Lade die Werbung.json von GitHub
+        async function ladeWerbung() {
+            try {
+                // Ein Zeitstempel am Ende verhindert, dass der Browser eine alte Version aus dem Cache lädt
+                const response = await fetch(GITHUB_BASE_URL + 'ads.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("ads.json nicht gefunden");
+                
+                const data = await response.json();
+                
+                if (data.media && Array.isArray(data.media)) {
+                    adMedia = data.media;
+                }
+                if (data.interval) {
+                    adIntervalTime = data.interval;
+                }
+            } catch (error) {
+                console.log("Konnte Werbedaten nicht laden. Keine Werbung verfügbar.", error);
+            }
+        }
 
         function resetIdleTimer() {
             clearTimeout(idleTimeout);
@@ -206,14 +221,13 @@
                 hideAdvertising();
             }
             
-            // Timer nur neu starten, wenn das Admin-Menü geschlossen ist
             if (!isAdminOpen) {
                 idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
             }
         }
 
         function showAdvertising() {
-            if (isAdminOpen) return; // Verhindert, dass Werbung startet, während man im Admin-Menü ist
+            if (isAdminOpen || adMedia.length === 0) return; // Nicht starten im Admin-Menü oder wenn keine Werbung geladen wurde
             
             isAdModeActive = true;
             adScreen.style.display = 'block';
@@ -249,7 +263,6 @@
                 currentAdIndex = 0;
             }
         }
-
         // --- ENDE WERBEMODUS LOGIK ---
 
         function initDropdown() {
@@ -374,7 +387,7 @@
             const inputField = document.getElementById(currentActiveInputId);
             let aktuellerWert = inputField.value;
 
-            resetIdleTimer(); // Tippen auf dem Numpad setzt den Timer ebenfalls zurück
+            resetIdleTimer();
 
             if (wert === 'clear') {
                 inputField.value = aktuellerWert.slice(0, -1);
@@ -406,7 +419,6 @@
                     document.getElementById('preisDisplay').textContent = aktuellerDruckpreis.toFixed(2).replace('.', ',') + " €";
                 }
 
-                // Wenn IRGENDEINE Karte aufgelegt wird, sofort die Werbung beenden!
                 if (data.status === "admin_hold" || data.status === "user_card" || data.status === "admin_learned") {
                     resetIdleTimer();
                 }
@@ -515,10 +527,10 @@
             document.getElementById('adminOverlay').style.display = 'none'; 
             logoutCard();
             
-            resetIdleTimer(); // Timer nach dem Schließen des Admin-Menüs wieder starten
+            resetIdleTimer();
         }
 
-        // Event Listener für Touch und Klicks auf dem gesamten Bildschirm (weckt das System)
+        // Event Listener
         window.addEventListener('click', resetIdleTimer);
         window.addEventListener('touchstart', resetIdleTimer);
         window.addEventListener('mousemove', resetIdleTimer);
@@ -526,12 +538,13 @@
         // Initialisierung
         initDropdown();
         ladeAbfahrten();
-        resetIdleTimer(); // Timer beim ersten Start aktivieren
+        ladeWerbung(); // Läd die Werbung.json vom GitHub Server
+        resetIdleTimer(); 
 
         // Background-Loops
         setInterval(ladeAbfahrten, 60000);
         setInterval(checkNFC, 1500);
+        setInterval(ladeWerbung, 3600000); // Läd die Werbung alle 60 Minuten neu, falls du was anpasst
     </script>
 </body>
 </html>
-         
