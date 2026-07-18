@@ -1,0 +1,13 @@
+{
+  "interval": 8000,
+  "media": [
+    {
+      "type": "image",
+      "url": "https://raw.githubusercontent.com/nicopro2021/Abfahrtstafel-/main/werbung1.jpg"
+    },
+    {
+      "type": "video",
+      "url": "https://raw.githubusercontent.com/nicopro2021/Abfahrtstafel-/main/werbung2.mp4"
+    }
+  ]
+}
