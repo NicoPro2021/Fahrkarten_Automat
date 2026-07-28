@@ -121,6 +121,8 @@
         
         .btn-secondary { background-color: #555; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .btn-secondary:hover { background-color: #333; }
+        .btn-print { font-size: 20px; padding: 15px 40px; background-color: #009900; }
+        .btn-print:hover { background-color: #007700; }
 
         .table-container {
             width: 100%;
@@ -143,6 +145,20 @@
             accent-color: var(--db-red);
         }
 
+        /* --- BEZAHL OVERLAY --- */
+        .payment-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 9998; justify-content: center; align-items: center; color: white;
+            backdrop-filter: blur(5px);
+        }
+        .payment-box {
+            background: #2b2b2b; padding: 40px 50px; border-radius: 15px; border: 3px solid #009900; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); max-width: 500px; width: 90%;
+        }
+        .payment-box h2 { color: white; margin-top: 0; font-size: 28px; }
+        .payment-amount { font-size: 48px; color: #ffcc00; font-weight: bold; margin: 25px 0; }
+        .payment-status { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: white; }
+        
         /* --- ADMIN OVERLAY --- */
         .admin-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -158,10 +174,6 @@
         .btn-sys:hover { background-color: #555; }
         .btn-close { background-color: #333; margin-top: 20px; }
         .sub-box { background: #1a1a1a; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #333; }
-        
-        .status-badge {
-            display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; margin-left: 10px; font-size: 14px;
-        }
 
         /* --- NUMPAD --- */
         .numpad-container {
@@ -204,7 +216,7 @@
     <div id="mainScreen" class="screen">
         <div class="kiosk-bar">
             <div>Karte: <span id="cardDisplay" class="card-info">Keine Karte</span>
-                 <button id="logoutBtn" class="logout-btn" onclick="logoutCard()" style="display:none;">Abmelden ❌</button>
+                 <button id="logoutBtn" class="logout-btn" onclick="logoutCard()" style="display:none;">Auswerfen ⏏️</button>
             </div>
             <div>Guthaben: <span id="guthabenDisplay">0,00 €</span></div>
             <div>Preis/Linie: <span id="preisDisplay" class="price-tag">0,50 €</span></div>
@@ -216,7 +228,7 @@
             <h2 id="stationTitle" style="margin: 0; color: var(--text-dark);">Abfahrtstafel</h2>
             <div style="display: flex; gap: 10px;">
                 <button class="btn-secondary" onclick="ladeAbfahrten(currentStationFile)">Aktualisieren 🔄</button>
-                <button id="printBtn" onclick="druckeFahrplan()" disabled>Bitte Verbindungen wählen 🖨️</button>
+                <button id="printBtn" class="btn-print" onclick="oeffneBezahlScreen()" disabled>Bitte Verbindungen wählen</button>
             </div>
         </div>
 
@@ -227,6 +239,17 @@
                 </thead>
                 <tbody><tr><td colspan="5">Warte auf Eingabe...</td></tr></tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- BEZAHL OVERLAY -->
+    <div id="paymentOverlay" class="payment-overlay">
+        <div class="payment-box">
+            <h2>💳 Bitte Karte auflegen</h2>
+            <p style="font-size: 18px;">Zu zahlender Betrag:</p>
+            <div class="payment-amount" id="paymentAmountDisplay">0,00 €</div>
+            <div class="payment-status" id="paymentStatusMessage">Warte auf NFC-Karte...</div>
+            <button class="btn-secondary" style="width: 100%; padding: 15px; font-size: 18px;" onclick="abbrechenZahlung()">Abbrechen ❌</button>
         </div>
     </div>
 
@@ -288,6 +311,9 @@
         let aktiveCardUID = null;
         let aktuellesGuthaben = 0.00;
         let isAdminOpen = false;
+        let isWaitingForPayment = false; // Neu: Wartet das System auf die Karte zum Bezahlen?
+        let gewaehlteZuegeFuerDruck = []; // Neu: Zwischenspeicher für den Druck
+
         let ausgewählteAdminKundenUID = null;
         let blockNfcPolling = false;
         let currentActiveInputId = null;
@@ -368,17 +394,16 @@
         function resetIdleTimer() {
             clearTimeout(idleTimeout);
             if (isAdModeActive) hideAdvertising();
-            if (!isAdminOpen) idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
+            if (!isAdminOpen && !isWaitingForPayment) idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
         }
 
         function showAdvertising() {
-            if (isAdminOpen || adMedia.length === 0) return; 
+            if (isAdminOpen || isWaitingForPayment || adMedia.length === 0) return; 
             isAdModeActive = true;
             adScreen.style.display = 'block';
             playNextAd(); 
             adInterval = setInterval(playNextAd, adIntervalTime);
             
-            // Bei Inaktivität zurück zum Startbildschirm wechseln
             if(document.getElementById('mainScreen').classList.contains('active')) {
                 zurueckZumStart();
             }
@@ -469,80 +494,123 @@
                 return;
             }
 
-            printBtn.style.backgroundColor = ""; // Reset inline color
+            // Normaler Button Style (grün)
+            printBtn.style.backgroundColor = ""; 
 
             if (anzahlGewählt === 0) {
                 printBtn.disabled = true;
                 printBtn.textContent = "Bitte Verbindungen wählen 🖨️";
-            } else if (!aktiveCardUID) {
-                printBtn.disabled = true;
-                printBtn.textContent = "Zum Drucken Karte auflegen 💳";
-            } else if (aktuellesGuthaben < aktuellerGesamtPreis) {
-                printBtn.disabled = true;
-                printBtn.textContent = "Guthaben zu gering ❌";
             } else {
                 printBtn.disabled = false;
-                printBtn.textContent = `Drucken für ${aktuellerGesamtPreis.toFixed(2).replace('.',',')} € 🖨️`;
+                printBtn.textContent = `Jetzt Drucken (${aktuellerGesamtPreis.toFixed(2).replace('.',',')} €) 🖨️`;
             }
         }
 
-        async function druckeFahrplan() {
-            if (!aktiveCardUID || blockNfcPolling || isDruckGesperrt || aktuellerGesamtPreis === 0) return;
+        // --- ZAHLUNGS- & DRUCKLOGIK ---
+        
+        function oeffneBezahlScreen() {
+            if (isDruckGesperrt || aktuellerGesamtPreis === 0) return;
 
             const checkboxen = document.querySelectorAll('.print-chkbx:checked');
-            let gewaehlteZuege = Array.from(checkboxen).map(box => aktuelleAbfahrten[parseInt(box.getAttribute('data-index'))]);
+            gewaehlteZuegeFuerDruck = Array.from(checkboxen).map(box => aktuelleAbfahrten[parseInt(box.getAttribute('data-index'))]);
+
+            document.getElementById('paymentAmountDisplay').textContent = aktuellerGesamtPreis.toFixed(2).replace('.', ',') + " €";
+            
+            const statusMsg = document.getElementById('paymentStatusMessage');
+            statusMsg.textContent = "Warte auf NFC-Karte...";
+            statusMsg.style.color = "white";
+
+            document.getElementById('paymentOverlay').style.display = 'flex';
+            
+            isWaitingForPayment = true;
+            resetIdleTimer(); // Timer zurücksetzen
+        }
+
+        function abbrechenZahlung() {
+            isWaitingForPayment = false;
+            document.getElementById('paymentOverlay').style.display = 'none';
+            resetIdleTimer();
+        }
+
+        async function verarbeiteZahlung(uid, guthaben, cardName) {
+            if(blockNfcPolling) return; // Verhindert doppelte Ausführung
+            
+            const statusMsg = document.getElementById('paymentStatusMessage');
+
+            // Prüfen ob genug Geld da ist
+            if (guthaben < aktuellerGesamtPreis) {
+                statusMsg.innerHTML = `❌ Guthaben zu gering!<br><span style="font-size:16px;">(Guthaben: ${guthaben.toFixed(2).replace('.',',')} €)</span>`;
+                statusMsg.style.color = "var(--db-red)";
+                return; // Lässt das Fenster offen für eine andere Karte
+            }
 
             blockNfcPolling = true;
+            statusMsg.textContent = "⏳ Abbuchung läuft...";
+            statusMsg.style.color = "#00ffcc";
 
             try {
-                // Info: Das Backend muss ggf. angepasst werden, um 'betrag' zu verarbeiten, 
-                // da der Preis nun flexibel pro Linie ist.
+                // Abbuchen beim Backend
                 const resAbbuchen = await fetch('http://127.0.0.1:5000/abbuchen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uid: aktiveCardUID, betrag: aktuellerGesamtPreis })
+                    body: JSON.stringify({ uid: uid, betrag: aktuellerGesamtPreis })
                 });
                 const datenAbbuchen = await resAbbuchen.json();
 
                 if(datenAbbuchen.status === "success") {
-                    aktuellesGuthaben = datenAbbuchen.guthaben;
-                    document.getElementById('guthabenDisplay').textContent = aktuellesGuthaben.toFixed(2).replace('.', ',') + " €";
+                    statusMsg.textContent = "✅ Erfolgreich! Druck startet...";
+                    statusMsg.style.color = "#00ffcc";
 
+                    // Zeige Karte oben in der Bar (falls User das checken will)
+                    aktiveCardUID = uid;
+                    aktuellesGuthaben = datenAbbuchen.guthaben;
+                    document.getElementById('cardDisplay').textContent = cardName;
+                    document.getElementById('guthabenDisplay').textContent = aktuellesGuthaben.toFixed(2).replace('.', ',') + " €";
+                    document.getElementById('logoutBtn').style.display = 'inline-block';
+
+                    // Druckauftrag an den Server senden
                     await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             station: currentStationName, 
-                            abfahrten: gewaehlteZuege,
+                            abfahrten: gewaehlteZuegeFuerDruck,
                             wurde_gefiltert: true
                         })
                     });
 
-                    // Nach dem Drucken Haken entfernen
-                    checkboxen.forEach(box => box.checked = false);
+                    // UI Reset nach erfolgreichem Druck
+                    document.querySelectorAll('.print-chkbx:checked').forEach(box => box.checked = false);
                     berechneGesamtPreis();
 
+                    // Fenster nach 2.5 Sekunden schließen
                     setTimeout(() => {
-                        logoutCard();
+                        abbrechenZahlung(); 
                         blockNfcPolling = false;
+                        
+                        // Karte nach 10 Sekunden automatisch abmelden (als nettes Feature)
+                        setTimeout(logoutCard, 10000);
                     }, 2500);
+
                 } else { 
-                    alert(datenAbbuchen.message || "Fehler beim Abbuchen"); 
+                    statusMsg.textContent = "❌ Fehler: " + (datenAbbuchen.message || "Abbuchung fehlgeschlagen");
+                    statusMsg.style.color = "var(--db-red)";
                     blockNfcPolling = false;
                 }
             } catch (error) { 
-                alert("Transaktion fehlgeschlagen. Backend erreichbar?"); 
+                statusMsg.textContent = "❌ Systemfehler! (Backend erreichbar?)";
+                statusMsg.style.color = "var(--db-red)";
                 blockNfcPolling = false;
             }
         }
 
-        // --- NFC & ADMIN LOGIK ---
         function logoutCard() {
             aktiveCardUID = null;
             aktuellesGuthaben = 0.00;
             document.getElementById('cardDisplay').textContent = "Keine Karte";
             document.getElementById('guthabenDisplay').textContent = "0,00 €";
             document.getElementById('logoutBtn').style.display = 'none';
-            updatePrintButton();
         }
+
+        // --- NFC & ADMIN LOGIK ---
 
         async function checkNFC() {
             if (blockNfcPolling) return;
@@ -551,11 +619,11 @@
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
 
-                // Wenn der Preis vom Server kommt, aktualisieren
+                // Preis Update vom Server
                 if (data.preis && data.preis !== preisProLinie) {
                     preisProLinie = data.preis;
                     document.getElementById('preisDisplay').textContent = preisProLinie.toFixed(2).replace('.', ',') + " €";
-                    berechneGesamtPreis(); // Neuberechnung bei Preisänderung im Hintergrund
+                    berechneGesamtPreis(); 
                 }
 
                 if (data.status === "admin_hold" || data.status === "user_card" || data.status === "admin_learned") {
@@ -564,6 +632,7 @@
 
                 if (data.status === "admin_hold") {
                     isAdminOpen = true;
+                    if(isWaitingForPayment) abbrechenZahlung(); // Bezahlfenster schließen falls offen
                     document.getElementById('inputPreis').value = preisProLinie.toFixed(2);
                     document.getElementById('adminOverlay').style.display = 'flex';
                     setActiveInput('inputPreis'); 
@@ -574,22 +643,28 @@
                 }
                 else if (data.status === "user_card") {
                     if (isAdminOpen) {
+                        // Karte wird im Admin-Menü aufgelegt (zum Aufladen)
                         ausgewählteAdminKundenUID = data.uid;
                         document.getElementById('adminCardStatus').innerHTML = `Gewählt: <b>${data.card_name}</b><br>Guthaben: ${data.guthaben.toFixed(2)} €`;
                         document.getElementById('chargeControls').style.display = 'block';
                         document.getElementById('inputAufladen').value = "";
                         setActiveInput('inputAufladen'); 
-                    } else {
+                    } 
+                    else if (isWaitingForPayment) {
+                        // Karte wird im Bezahl-Overlay aufgelegt!
+                        verarbeiteZahlung(data.uid, data.guthaben, data.card_name);
+                    }
+                    else {
+                        // Karte wird einfach so aufgelegt (ohne Drucken) um das Guthaben zu checken
                         aktiveCardUID = data.uid;
                         aktuellesGuthaben = data.guthaben;
                         document.getElementById('cardDisplay').textContent = data.card_name;
                         document.getElementById('guthabenDisplay').textContent = aktuellesGuthaben.toFixed(2).replace('.', ',') + " €";
                         document.getElementById('logoutBtn').style.display = 'inline-block';
-                        updatePrintButton();
                     }
                 }
             } catch (e) { 
-                // Silently fail on NFC disconnect to not spam console
+                // Silently fail on NFC disconnect
             }
         }
 
@@ -678,7 +753,7 @@
                 if(res.status === "success") { 
                     preisProLinie = neuerPreis;
                     schließeAdminMenü(); 
-                    berechneGesamtPreis(); // Live update main UI
+                    berechneGesamtPreis(); 
                 }
             } catch (e) { alert("Fehler beim Speichern des Preises. Läuft der Server?"); }
         }
