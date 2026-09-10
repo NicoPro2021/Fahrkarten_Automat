@@ -25,6 +25,7 @@
             user-select: none; 
             height: 100vh;
             overflow: hidden;
+            position: relative; /* Für die Uhr-Positionierung */
         }
 
         h1 { 
@@ -33,6 +34,21 @@
             margin: 20px 0; 
             font-size: 2.5em;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* --- CLOCK --- */
+        .kiosk-clock {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            font-size: 26px;
+            font-weight: bold;
+            color: var(--text-dark);
+            background: var(--tile-bg);
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            z-index: 100;
         }
 
         /* --- SCREEN MANAGEMENT --- */
@@ -64,6 +80,7 @@
             width: 100%;
             overflow-y: auto;
             padding-bottom: 20px;
+            margin-top: 20px;
         }
 
         .station-tile {
@@ -94,7 +111,7 @@
             width: 100%; 
             display: flex; justify-content: space-between; align-items: center;
             background: #2b2b2b; color: white; padding: 15px 25px;
-            border-radius: 10px; margin-bottom: 20px;
+            border-radius: 10px; margin-top: 60px; margin-bottom: 20px; /* margin-top wegen Uhr angepasst */
             box-sizing: border-box; font-size: 18px; font-weight: bold;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
@@ -130,6 +147,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             background: white;
+            flex-grow: 1;
         }
 
         table { width: 100%; border-collapse: collapse; font-size: 18px; }
@@ -139,7 +157,6 @@
         .delay { color: var(--db-red); font-weight: bold; }
         .info-text { font-size: 0.85em; color: var(--db-red); display: block; margin-top: 5px; }
         
-        /* Custom Checkbox */
         .print-chkbx { 
             width: 30px; height: 30px; cursor: pointer; 
             accent-color: var(--db-red);
@@ -199,6 +216,9 @@
     </style>
 </head>
 <body>
+
+    <!-- Globale Uhr -->
+    <div id="uhrDisplay" class="kiosk-clock">00:00:00</div>
 
     <!-- Screensaver -->
     <div id="ad-screen">
@@ -268,6 +288,12 @@
                 <button class="admin-btn" onclick="speichereNeuenPreis()">Preis Speichern</button>
             </div>
 
+            <!-- NEU: Werbung Steuerung -->
+            <div class="sub-box">
+                <h3 style="margin-top:0;">📺 Screensaver / Werbung</h3>
+                <button id="btnWerbungToggle" class="admin-btn" style="background:#00b386;" onclick="toggleWerbung()">Werbung: AKTIV ✅</button>
+            </div>
+
             <div class="sub-box">
                 <h3 style="margin-top:0;">💳 Karten-Terminal</h3>
                 <p id="adminCardStatus">Bitte Kundenkarte auf den Leser legen...</p>
@@ -311,14 +337,17 @@
         let aktiveCardUID = null;
         let aktuellesGuthaben = 0.00;
         let isAdminOpen = false;
-        let isWaitingForPayment = false; // Neu: Wartet das System auf die Karte zum Bezahlen?
-        let gewaehlteZuegeFuerDruck = []; // Neu: Zwischenspeicher für den Druck
+        let isWaitingForPayment = false;
+        let gewaehlteZuegeFuerDruck = []; 
 
         let ausgewählteAdminKundenUID = null;
         let blockNfcPolling = false;
         let currentActiveInputId = null;
         let currentStationFile = null;
         let currentStationName = null;
+
+        // Neu: Variable für Werbe-Status
+        let isAdEnabled = true;
 
         const LOCAL_STATIONS = [
             { name: "Bad Belzig", file: "bad_belzig.json" }, { name: "Berlin Hbf", file: "berlin_hbf.json" },
@@ -332,6 +361,15 @@
             { name: "Roßlau (Elbe)", file: "rosslau.json" }, { name: "Wolfen", file: "wolfen.json" },
             { name: "Wusterwitz", file: "wusterwitz.json" }, { name: "Zerbst/Anhalt", file: "zerbst.json" }
         ];
+
+        // --- CLOCK LOGIC ---
+        function updateUhr() {
+            const jetzt = new Date();
+            const zeitString = jetzt.toLocaleTimeString('de-DE');
+            document.getElementById('uhrDisplay').textContent = zeitString;
+        }
+        setInterval(updateUhr, 1000);
+        updateUhr(); // Initial aufrufen
 
         // --- SCREEN LOGIC ---
         function initStartScreen() {
@@ -394,11 +432,14 @@
         function resetIdleTimer() {
             clearTimeout(idleTimeout);
             if (isAdModeActive) hideAdvertising();
-            if (!isAdminOpen && !isWaitingForPayment) idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
+            // Werbung nur starten, wenn enabled, kein Admin-Menü offen und nicht im Bezahlvorgang
+            if (isAdEnabled && !isAdminOpen && !isWaitingForPayment) {
+                idleTimeout = setTimeout(showAdvertising, idleTimeLimit);
+            }
         }
 
         function showAdvertising() {
-            if (isAdminOpen || isWaitingForPayment || adMedia.length === 0) return; 
+            if (!isAdEnabled || isAdminOpen || isWaitingForPayment || adMedia.length === 0) return; 
             isAdModeActive = true;
             adScreen.style.display = 'block';
             playNextAd(); 
@@ -442,7 +483,7 @@
                 tbody.innerHTML = '';
                 const fahrten = Array.isArray(data) ? data : (data.abfahrten || []); 
                 aktuelleAbfahrten = fahrten; 
-                berechneGesamtPreis(); // Reset price
+                berechneGesamtPreis();
 
                 if (fahrten.length === 0) { 
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Keine aktuellen Abfahrten gefunden.</td></tr>'; 
@@ -494,7 +535,6 @@
                 return;
             }
 
-            // Normaler Button Style (grün)
             printBtn.style.backgroundColor = ""; 
 
             if (anzahlGewählt === 0) {
@@ -507,7 +547,6 @@
         }
 
         // --- ZAHLUNGS- & DRUCKLOGIK ---
-        
         function oeffneBezahlScreen() {
             if (isDruckGesperrt || aktuellerGesamtPreis === 0) return;
 
@@ -523,7 +562,7 @@
             document.getElementById('paymentOverlay').style.display = 'flex';
             
             isWaitingForPayment = true;
-            resetIdleTimer(); // Timer zurücksetzen
+            resetIdleTimer();
         }
 
         function abbrechenZahlung() {
@@ -533,15 +572,14 @@
         }
 
         async function verarbeiteZahlung(uid, guthaben, cardName) {
-            if(blockNfcPolling) return; // Verhindert doppelte Ausführung
+            if(blockNfcPolling) return; 
             
             const statusMsg = document.getElementById('paymentStatusMessage');
 
-            // Prüfen ob genug Geld da ist
             if (guthaben < aktuellerGesamtPreis) {
                 statusMsg.innerHTML = `❌ Guthaben zu gering!<br><span style="font-size:16px;">(Guthaben: ${guthaben.toFixed(2).replace('.',',')} €)</span>`;
                 statusMsg.style.color = "var(--db-red)";
-                return; // Lässt das Fenster offen für eine andere Karte
+                return; 
             }
 
             blockNfcPolling = true;
@@ -549,7 +587,6 @@
             statusMsg.style.color = "#00ffcc";
 
             try {
-                // Abbuchen beim Backend
                 const resAbbuchen = await fetch('http://127.0.0.1:5000/abbuchen', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ uid: uid, betrag: aktuellerGesamtPreis })
@@ -560,14 +597,12 @@
                     statusMsg.textContent = "✅ Erfolgreich! Druck startet...";
                     statusMsg.style.color = "#00ffcc";
 
-                    // Zeige Karte oben in der Bar (falls User das checken will)
                     aktiveCardUID = uid;
                     aktuellesGuthaben = datenAbbuchen.guthaben;
                     document.getElementById('cardDisplay').textContent = cardName;
                     document.getElementById('guthabenDisplay').textContent = aktuellesGuthaben.toFixed(2).replace('.', ',') + " €";
                     document.getElementById('logoutBtn').style.display = 'inline-block';
 
-                    // Druckauftrag an den Server senden
                     await fetch('http://127.0.0.1:5000/print-abfahrten', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -577,16 +612,12 @@
                         })
                     });
 
-                    // UI Reset nach erfolgreichem Druck
                     document.querySelectorAll('.print-chkbx:checked').forEach(box => box.checked = false);
                     berechneGesamtPreis();
 
-                    // Fenster nach 2.5 Sekunden schließen
                     setTimeout(() => {
                         abbrechenZahlung(); 
                         blockNfcPolling = false;
-                        
-                        // Karte nach 10 Sekunden automatisch abmelden (als nettes Feature)
                         setTimeout(logoutCard, 10000);
                     }, 2500);
 
@@ -619,7 +650,6 @@
                 const response = await fetch('http://127.0.0.1:5000/get-nfc');
                 const data = await response.json();
 
-                // Preis Update vom Server
                 if (data.preis && data.preis !== preisProLinie) {
                     preisProLinie = data.preis;
                     document.getElementById('preisDisplay').textContent = preisProLinie.toFixed(2).replace('.', ',') + " €";
@@ -632,7 +662,7 @@
 
                 if (data.status === "admin_hold") {
                     isAdminOpen = true;
-                    if(isWaitingForPayment) abbrechenZahlung(); // Bezahlfenster schließen falls offen
+                    if(isWaitingForPayment) abbrechenZahlung();
                     document.getElementById('inputPreis').value = preisProLinie.toFixed(2);
                     document.getElementById('adminOverlay').style.display = 'flex';
                     setActiveInput('inputPreis'); 
@@ -643,7 +673,6 @@
                 }
                 else if (data.status === "user_card") {
                     if (isAdminOpen) {
-                        // Karte wird im Admin-Menü aufgelegt (zum Aufladen)
                         ausgewählteAdminKundenUID = data.uid;
                         document.getElementById('adminCardStatus').innerHTML = `Gewählt: <b>${data.card_name}</b><br>Guthaben: ${data.guthaben.toFixed(2)} €`;
                         document.getElementById('chargeControls').style.display = 'block';
@@ -651,11 +680,9 @@
                         setActiveInput('inputAufladen'); 
                     } 
                     else if (isWaitingForPayment) {
-                        // Karte wird im Bezahl-Overlay aufgelegt!
                         verarbeiteZahlung(data.uid, data.guthaben, data.card_name);
                     }
                     else {
-                        // Karte wird einfach so aufgelegt (ohne Drucken) um das Guthaben zu checken
                         aktiveCardUID = data.uid;
                         aktuellesGuthaben = data.guthaben;
                         document.getElementById('cardDisplay').textContent = data.card_name;
@@ -708,6 +735,22 @@
                 btn.textContent = "Drucker Status: AKTIV ✅";
             }
             updatePrintButton();
+        }
+
+        // Neu: Werbungs-Toggle Logic
+        function toggleWerbung() {
+            isAdEnabled = !isAdEnabled;
+            const btn = document.getElementById('btnWerbungToggle');
+            if(isAdEnabled) {
+                btn.style.background = "#00b386";
+                btn.textContent = "Werbung: AKTIV ✅";
+                resetIdleTimer();
+            } else {
+                btn.style.background = "var(--db-red-hover)";
+                btn.textContent = "Werbung: DEAKTIVIERT 🚫";
+                clearTimeout(idleTimeout); // Timer stoppen
+                hideAdvertising();         // Werbung sofort ausblenden falls aktiv
+            }
         }
 
         async function starteAdminLernen() {
